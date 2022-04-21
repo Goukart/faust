@@ -1,6 +1,6 @@
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-
+import pprint
 import sys          # Handle cli parameter
 import getopt       # Handle named cli parameter
 import os           # Handle platform independent paths
@@ -17,7 +17,27 @@ import PIL
 from PIL import Image
 
 
-def load_files(file_path):
+def columnify(iterable):
+    # First convert everything to its str
+    strings = [str(x) for x in iterable]  # repr seems to be for debugging
+    # Now pad all the strings to match the widest
+    widest = max(len(x) for x in strings)
+    padded = [x.ljust(widest) for x in strings]
+    return padded
+
+
+def colprint(iterable, width=120):
+    columns = columnify(iterable)
+    colwidth = len(columns[0])+2
+    perline = (width-4) // colwidth
+    for i, column in enumerate(columns):
+        print(column, end='\t')
+        if i % perline == perline-1:
+            print('\n', end='')
+    print("\n")
+
+
+def load_files(expression):
     # ToDo Make this a script with parameter in console, also select images by regex
     # ToDo optional load from internet? maybe later in finished product
     # Download an image from the PyTorch homapage
@@ -25,33 +45,6 @@ def load_files(file_path):
     # urllib.request.urlretrieve(url, filename)
     # ToDo test if works on Windows
 
-    image_formats = ("jpg", "png")
-    path_parts = os.path.split(file_path)
-
-    subject = path_parts[1]
-    path = path_parts[0]
-
-    image_paths = []
-    filename = ""
-
-    for root, dirs, files in os.walk(path):
-        for name in files:
-            name_parts = name.split(".")
-            if name_parts[0] == subject and name.endswith(image_formats):
-                file_type = name_parts[1]
-                filename = os.path.join(path, subject + '.' + file_type)
-
-    if filename == "":
-        print(f"Could not find [{subject}] in [{path}]")
-        exit(-1)
-
-    print("Loading file: " + filename)
-
-    image_paths.append(filename)
-    return image_paths
-
-
-def test_regex(expression):
     parts = os.path.split(expression)
     regex = ""
     try:
@@ -82,10 +75,13 @@ def test_regex(expression):
     # ToDo show selection and ask for confirmation
 
     if len(image_paths) < 1:
-        print(f"Could not match [{regex}] in [{path}], {files}")
+        print(f"Could not match [{regex.pattern}] on files in [{path}]:")  # \n{as_table(files)}
+        # pprint.pprint(files, compact=True)
+        colprint(files)
         exit(-1)
 
-    print(f"Loading files: {image_paths}")
+    print("Loading files:\n")
+    colprint(image_paths)
     return image_paths
 
 
@@ -245,8 +241,7 @@ if __name__ == '__main__':
         "Help": 'h',
         "Model=": 'm:',
         "Output=": 'o:',
-        "Images=": 'i:',
-        "RegEx=": 'r:'
+        "Images=": 'i:'
     }
 
     # Options
@@ -293,12 +288,8 @@ if __name__ == '__main__':
                 print(f"Saving to file: [{currentValue}]")
 
             elif currentArgument in ("-i", "--Images"):
-                # print(f"Try loading file")
+                print(f"Try loading file")
                 images = load_files(currentValue)
-
-            elif currentArgument in ("-r", "--RegEx"):
-                print(f"Test RegEx")
-                test_regex(currentValue)
 
             else:
                 print("Option not implemented!")
@@ -309,8 +300,8 @@ if __name__ == '__main__':
         # print("Invalid argument")
         print(str(err))
 
-    #model = select_model(model_input)
+    model = select_model(model_input)
 
-    #for image in images:
-    #    image_name = os.path.split(image)[1].split('.')[0]
-    #    save_result(generate_image(image, model), image_name)
+    for image in images:
+        image_name = os.path.split(image)[1].split('.')[0]
+        save_result(generate_image(image, model), image_name)
