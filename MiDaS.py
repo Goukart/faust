@@ -37,14 +37,38 @@ def colprint(iterable, width=120):
     print("\n")
 
 
-def load_files(expression):
-    # ToDo Make this a script with parameter in console, also select images by regex
-    # ToDo optional load from internet? maybe later in finished product
-    # Download an image from the PyTorch homapage
-    # url, filename = ("https://github.com/pytorch/hub/raw/master/images/dog.jpg", "dog.jpg")
-    # urllib.request.urlretrieve(url, filename)
-    # ToDo test if works on Windows
+def error_print(function_name, error_message):
+    print("---------------------------------------")
+    # ToDo format so: ---- // <name> \\ ---- [...] ---- \\ <name> // ----
+    print(f"in {function_name}")
+    print(error_message)
+    print("---------------------------------------")
 
+
+def array_is_equal(array_1, array_2):
+    # if the length of arrays are different return false
+    n_array_1 = len(array_1)
+    n_array_2 = len(array_2)
+    if n_array_1 != n_array_2:
+        error_print(array_is_equal.__name__, f"Array not same lengths: {n_array_1} ≠ {n_array_2}")
+        return False
+    else:
+        # sort both the arrays
+        array_1.sort()
+        array_2.sort()
+        # traverse each index of arrays
+        for i in range(n_array_1):
+            # for same index if the value in the sorted arrays are different return false
+            if array_1[i] != array_2[i]:
+                error_print(array_is_equal.__name__, f"Item at i={i} not equal: [{array_1[i]}] ≠ [{array_2[i]}]")
+                return False
+
+    # if none of the above conditions satisfied return true
+    return True
+
+
+def load_files(expression):
+    # ToDo test if works on Windows, using '\' as path seperator
     parts = os.path.split(expression)
     regex = ""
     try:
@@ -56,33 +80,46 @@ def load_files(expression):
     path = parts[0]
     files = os.listdir(path)
 
-    # lambda file: f"oop {file}",
-    # image_paths = list(filter(regex.match, files))
-    # ToDo eine funktion die jeden match erst bearbeitet und dann in eine neue liste packt
     image_paths = []
     for file in files:
         if regex.match(file):
             image_paths.append(os.path.join(path, file))
 
-    # print(list(filter(lambda x: x[0].lower() in 'aeiou', creature_names)))
-
-    # matches = list(filter(regex.match, files))
-    # print(f"Parameter: {expression}")
-    # print(f"RegEx: '{regex.pattern}'")
-    # print(f"Files: {files}")
-    # print(f"Matches: {matches}")
-
-    # ToDo show selection and ask for confirmation
-
     if len(image_paths) < 1:
-        print(f"Could not match [{regex.pattern}] on files in [{path}]:")  # \n{as_table(files)}
-        # pprint.pprint(files, compact=True)
+        print(f"Could not match [{regex.pattern}] on files in [{path}]:")
         colprint(files)
         exit(-1)
 
     print("Loading files:\n")
     colprint(image_paths)
+    print("Confirm selection ? [y/N] ")
+
+    if input().lower() in ("y", "yes"):
+        print("Confirmed")
+    else:
+        print("Aborting")
+        exit()
+
     return image_paths
+
+
+def select_model(_input):
+    #######################################################################
+    #      Load a model
+    #      (see https://github.com/isl-org/MiDaS#Accuracy for an overview)
+    #######################################################################
+    if _input.lower() in ("large", "dpt_large"):
+        # MiDaS v3 - Large     (highest accuracy, slowest inference speed)
+        return "DPT_Large"
+    elif _input.lower() in ("hybrid", "dpt_hybrid"):
+        # MiDaS v3 - Hybrid    (medium accuracy, medium inference speed)
+        return "DPT_Hybrid"
+    elif _input.lower() in ("small", "midas_small"):
+        # MiDaS v2.1 - Small   (lowest accuracy, highest inference speed)
+        return "MiDaS_small"
+    else:
+        print("Unknown model, defaulting to small")
+        return "MiDaS_small"
 
 
 def generate_image(original_image, model_type):
@@ -179,8 +216,9 @@ def save_result(byte_array, name):
 
     x = (byte_array - fmin) * factor
 
-    output16 = np.array(byte_array * 4, np.uint16)
+    output16 = np.array(byte_array, np.uint16)
     image_pil = PIL.Image.fromarray(output16)
+    # image_pil = PIL.Image.fromarray(byte_array)
     # print(image_pil)
     plt.imshow(image_pil)
     new = name + '_z-tmp.png'
@@ -188,97 +226,77 @@ def save_result(byte_array, name):
     image_pil.save(new)
 
 
-def array_is_equal(array_1, array_2):
-    # if the length of arrays are different return false
-    n_array_1 = len(array_1)
-    n_array_2 = len(array_2)
-    if n_array_1 != n_array_2:
-        print(f"Array not same lengths: {n_array_1} ≠ {n_array_2}")
-        return False
-    else:
-        # sort both the arrays
-        array_1.sort()
-        array_2.sort()
-        # traverse each index of arrays
-        for i in range(n_array_1):
-            # for same index if the value in the sorted arrays are different return false
-            if array_1[i] != array_2[i]:
-                print(f"{array_1[i]} ≠ {array_2[i]}")
-                return False
-
-    # if none of the above conditions satisfied return true
-    return True
-
-
-def select_model(_input):
-    #######################################################################
-    #      Load a model
-    #      (see https://github.com/isl-org/MiDaS#Accuracy for an overview)
-    #######################################################################
-    model_type = "MiDaS_small"  # MiDaS v2.1 - Small   (lowest accuracy, highest inference speed)
-    if _input.lower() in ("large", "dpt_large"):
-        # MiDaS v3 - Large     (highest accuracy, slowest inference speed)
-        model_type = "DPT_Large"
-    elif _input.lower() in ("hybrid", "dpt_hybrid"):
-        # MiDaS v3 - Hybrid    (medium accuracy, medium inference speed)
-        model_type = "DPT_Hybrid"
-    else:
-        return model_type
-
-    return model_type
-
-
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    # print("The name of this script is %s" % (sys.argv[0]))
-    # args = len(sys.argv) - 1
-    # print("The script was called with %i arguments" % args)
-
     # Remove 1st argument from the list of command line arguments
     argumentList = sys.argv[1:]
 
-    dict = {
-        "Help": 'h',
-        "Model=": 'm:',
-        "Output=": 'o:',
-        "Images=": 'i:'
-    }
+    # dict = {
+    #     "Help": 'h',
+    #     "Model=": 'm:',
+    #     "Output=": 'o:',
+    #     "Images=": 'i:'
+    # }
+    options = [
+        # [long option, option, input] options
+        ["Help", 'h', False],
+        ["Model", 'm', True],
+        ["Output", 'o', True],
+        ["Images", 'i', True]
+    ]
 
     # Options
     # options = "hm:o:"
-    options = ''.join(dict.values())
+    # a_short_options = ''.join(dict.values())
+    short_options = "".join([(row[1] + ":" if row[2] else row[1]) for row in options])
 
     # Long options
     # long_options = ["Help", "Output=", "Mega=", "Model="]
-    long_options = list(dict)
+    # a_long_options = list(dict)
+    long_options = [(row[0] + "=" if row[2] else row[0]) for row in options]
+
+    # print(f"    is: {short_options}")
+    # print("should: " + a_short_options)
+    # print("\n\n")
+
+    # if array_is_equal(a_long_options, long_options):
+    #     print("equal")
+    # else:
+    #     print("ALARM, long_options")
+
+    # if a_short_options == short_options:
+    #     print("equal")
+    # else:
+    #     print("ALARM, short_options")
+
 
     # if not array_is_equal(list(dict), long_options):
     #     print("ALARM!")
     #     exit(-1)
-
-    # python MiDaS.py -o 123 --Model large -i images/4
 
     # Load and handle parameter
     model_input = ""
     images = []
     try:
         # Parsing argument
-        arguments, values = getopt.getopt(argumentList, options, long_options)
+        arguments, values = getopt.getopt(argumentList, short_options, long_options)
+
+        # ToDo change to dynamic checking from dict, not manually expanding else ifs
+        # Check if required options are set
+        # if ("-i", "--Images") not in arguments:
+        #     print(arguments)
+        #     print("Image is required")
+        #     exit(-1)
 
         # checking each argument
-        # ToDo change to dynamic checking from dict, not manually expanding else ifs
-        # Todo make sure to check required parameter
         for currentArgument, currentValue in arguments:
 
             if currentArgument in ("-h", "--Help"):
                 print("Displaying Help")
                 # ToDo actually helpful help, with minimal manual labor
-                for option in dict:
+                for option in options:
                     print(option)
                 exit()
-
-            elif currentArgument in "--Mega":
-                print(f"Loading Mega: [{currentValue}]")
 
             elif currentArgument in ("-m", "--Model"):
                 # print(f"Loading MiDaS Model: [{currentValue}]")
@@ -297,7 +315,6 @@ if __name__ == '__main__':
 
     except getopt.error as err:
         # output error, and return with an error code
-        # print("Invalid argument")
         print(str(err))
 
     model = select_model(model_input)
