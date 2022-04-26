@@ -8,6 +8,7 @@
 PointCloud/__pycache__
 PointCloud/.idea
 .idea
+__pycache__
 images
 venv
 pyntcloud_plot_assets
