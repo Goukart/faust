@@ -1,0 +1,10 @@
+*.png*
+*.jpg
+*.js
+*.xml
+*.iml
+*.html
+*.json
+PointCloud/__pycache__
+PointCloud/.idea
+.idea
