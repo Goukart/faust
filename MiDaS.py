@@ -158,22 +158,37 @@ def __generate_image(original_image):
 
 
 def _max(array):
+    # This is okay (1/2 s)
     maxes = []
     for list in array:
         maxes.append(max(list))
     maximum = max(maxes)
     # print(maximum)
+
+    # This is quite fast (1/4 sec)
+    #copy = array.copy()
+    #maximum = 0
+    #for arr in copy:
+    #    arr.sort()
+    #    new = arr[-1]
+    #    if new > maximum:
+    #        maximum = new
+
+    # This is insanely slow (2,5 sec)
+    #maximum = 0
+    #for i in range(len(array)):
+    #    for j in range(len(array[i])):
+    #        if array[i][j] > maximum:
+    #            maximum = array[i][j]
+
     return maximum
 
 
+# ToDo: don't change parameter (pass copy not reference)
 def _max_opt(array):
-    maximum = 0
-    new = 0
-    for arr in array:
-        new = max(arr) # arr.sort()[0]
-        if new > maximum:
-            maximum = new
-    return maximum
+    copy = array.copy()
+    copy[-1].sort()
+    return copy[-1][-1]
 
 
 def _min(array):
@@ -198,32 +213,10 @@ def __convert(byte_array):
 
     print("extremes")
     minimum = _min(output16)
-    times = 0
-    n = 15
-    for i in range(n):
-        start = time.time()
-        # minimum = _min(output16)
-        maximum = _max(byte_array)
-        end = time.time()
-        times += end - start
-    old = times / n
-    print("average time: ", old)
+    # maximum = _max(byte_array)
+    maximum = _max_opt(byte_array)
 
-    times = 0
-    for i in range(15):
-        start = time.time()
-        # minimum = _min(output16)
-        maximum = _max_opt(byte_array)
-        end = time.time()
-        times += end - start
-    opt = times / n
-    print("average time: ", opt)
-    if opt > old:
-        quality = "slower"
-    else:
-        quality = "faster"
-    print(f"optimization is {(opt/old)}% {quality} than initial procedure")
-
+    Tools.cmp_runtime(_max, _max_opt, byte_array, 15)
 
     print("Array: ")
     print(f"len(byte_array): {len(byte_array)} \nlen(byte_array[0]): {len(byte_array[0])}")
