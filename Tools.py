@@ -1,3 +1,6 @@
+import numpy as np
+
+
 def columnify(iterable):
     # First convert everything to its str
     strings = [str(x) for x in iterable]  # repr seems to be for debugging
@@ -27,23 +30,33 @@ def error_print(function_name, error_message):
 
 
 def array_is_equal(array_1, array_2):
-    # if the length of arrays are different return false
     n_array_1 = len(array_1)
     n_array_2 = len(array_2)
+
+    # Guarding ifs
     if n_array_1 != n_array_2:
         error_print(array_is_equal.__name__, f"Array not same lengths: {n_array_1} ≠ {n_array_2}")
         return False
-    else:
-        # sort both the arrays
-        array_1.sort()
-        array_2.sort()
-        # traverse each index of arrays
-        for i in range(n_array_1):
+
+    # sort both the arrays
+    array_1.sort()
+    array_2.sort()
+
+    # traverse each index of arrays
+    for i in range(n_array_1):
+        if (type(array_1[i]) in (list, np.ndarray)) and (type(array_2[i]) in (list, np.ndarray)):
+            if not array_is_equal(array_1[i], array_2[i]):
+                return False
+        else:
             # for same index if the value in the sorted arrays are different return false
             if array_1[i] != array_2[i]:
-                error_print(array_is_equal.__name__,
-                                 f"Item at i={i} not equal: [{array_1[i]}] ≠ [{array_2[i]}]")
+                error_print(array_is_equal.__name__, f"Item at i={i} not equal: [{array_1[i]}] ≠ [{array_2[i]}]")
                 return False
 
     # if none of the above conditions satisfied return true
     return True
+
+
+# pass two functions and pit them against each other to see which one is faster
+def cmp_runtime():
+    return 1
