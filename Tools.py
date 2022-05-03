@@ -84,6 +84,7 @@ def cmp_runtime(old, opt, parameter, n=10):
     print("average time: ", opt)
     print("outputs:\n", output)
 
+    # ToDo proper calculation of percenutal increase decrease
     if opt > old:
         quality = "slower"
         percent = (100 / old) * opt

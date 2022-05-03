@@ -7,21 +7,16 @@ import png
 
 
 def convert_to_1_ch_grayscale(image_path):
+    # ToDo, make sure it is gray scale and 16 bit (and if it really has to be)
     img = PIL.Image.open(image_path)
-    image_array = np.asarray(img)  # np.uint16(img)
-    image_pil = PIL.Image.fromarray(image_array, "I;16")  # image_array, "I;16"
 
-    # plt.imshow(gray, cmap=plt.get_cmap('gray'))
-    plt.imshow(image_pil)
+    img = img.convert('L')
+    print(img)
+    plt.imshow(img)  # cmap='gray'
     plt.show()
 
-    new = 'depth/1_z-tmp.png'
-    image_pil.save(new)
-
-    with open(new, 'wb') as f:
-        writer = png.Writer(width=image_array.shape[1], height=image_array.shape[0], bitdepth=16, greyscale=True)
-        zgray2list = image_array.tolist()
-        writer.write(f, zgray2list)
+    new = 'PointCloud/depth/z-tmp.png'
+    img.save(new)  # is saved as int or float might cause problems
 
     return new
 
@@ -29,8 +24,8 @@ def convert_to_1_ch_grayscale(image_path):
 def depth_map_to_point_cloud():
     # color_img_path = "color/4.jpg"
     # depth_img_path = "depth/4_z-tmp.png"
-    color_img_path = "PointCloud/color/1.jpg"
-    depth_img_path = "PointCloud/depth/z_1_tmp.png"
+    color_img_path = "PointCloud/color/1-.jpg"
+    depth_img_path = convert_to_1_ch_grayscale("PointCloud/depth/z_dry.png")
 
     color_raw = o3d.io.read_image(color_img_path)
     depth_raw = o3d.io.read_image(depth_img_path)
@@ -49,6 +44,9 @@ def depth_map_to_point_cloud():
     # print(depth_raw)
     # #########################################
 
+    # self, color, depth, depth_scale=1000.0, depth_trunc=3.0, convert_rgb_to_intensity=True
+    # rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(color_raw, depth_raw, 0.001, 300.)
+    # Image has to be spesific resolution (x,y)
     rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(color_raw, depth_raw)
 
     plt.subplot(1, 2, 1)
@@ -70,7 +68,7 @@ def depth_map_to_point_cloud():
     # pcd = o3d.geometry.PointCloud.create_from_depth_image(depth_raw, camera)
 
     #  flip the orientation, so it looks upright, not upside-down
-    # pcd.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
+    pcd.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
 
     o3d.visualization.draw_geometries([pcd])  # visualize the point cloud
 

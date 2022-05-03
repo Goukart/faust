@@ -58,6 +58,8 @@ def __load_files(expression):
     path = parts[0]
     files = os.listdir(path)
 
+    # ToDo: ius this where optimization can be con using filter and apply a funtion on every match?
+    # if so using maps and filter together maybe what i looked for
     image_paths = []
     for file in files:
         if regex.match(file):
@@ -157,47 +159,18 @@ def __generate_image(original_image):
     return output
 
 
-def _max(array):
-    # This is okay (1/2 s)
-    maxes = []
-    for list in array:
-        maxes.append(max(list))
-    maximum = max(maxes)
-    # print(maximum)
-
-    # This is quite fast (1/4 sec)
-    #copy = array.copy()
-    #maximum = 0
-    #for arr in copy:
-    #    arr.sort()
-    #    new = arr[-1]
-    #    if new > maximum:
-    #        maximum = new
-
-    # This is insanely slow (2,5 sec)
-    #maximum = 0
-    #for i in range(len(array)):
-    #    for j in range(len(array[i])):
-    #        if array[i][j] > maximum:
-    #            maximum = array[i][j]
-
-    return maximum
-
-
 # ToDo: don't change parameter (pass copy not reference)
-def _max_opt(array):
+# Funny image if I sort the array
+def _max(array):
     copy = array.copy()
     copy[-1].sort()
     return copy[-1][-1]
 
 
 def _min(array):
-    mins = []
-    for list in array:
-        mins.append(min(list))
-    minimum = min(mins)
-    print(minimum)
-    return minimum
+    copy = array.copy()
+    copy[0].sort()
+    return copy[0][0]
 
 
 # ToDo wip
@@ -207,23 +180,23 @@ def __convert(byte_array):
     # It ust be saved in gray scale with 1 channel to properly work later
     # print(f"Depth map saved under ./{subject}_z.png")
 
-    test = (byte_array * (40.996056 / 65535)) - 4.0213313
     output16 = np.array(byte_array, np.uint16)
     # output16 = np.array(byte_array)
 
     print("extremes")
-    minimum = _min(output16)
-    # maximum = _max(byte_array)
-    maximum = _max_opt(byte_array)
-
-    Tools.cmp_runtime(_max, _max_opt, byte_array, 15)
+    # print("what is faster")
+    # Tools.cmp_runtime(_min, np.min, byte_array)
+    minimum = byte_array.min()
+    maximum = byte_array.max()
+    print("min", minimum)
+    print("max", maximum)
 
     print("Array: ")
     print(f"len(byte_array): {len(byte_array)} \nlen(byte_array[0]): {len(byte_array[0])}")
 
     # map [fmin; fmax] to [imin-imax]
-    fmax = minimum
-    fmin = maximum
+    fmax = maximum
+    fmin = minimum
 
     # print(np.iinfo(output16[0][0].dtype).max)
     print(type(byte_array[0][0]))
@@ -239,27 +212,27 @@ def __convert(byte_array):
     # recalculate max to be 65535
     test = test * (maximum / imax)
 
+    # this might only work for 0-x putput range, does it work for [-5;5] and [-1;9] and [0-10] mapped mixed to same * 10
+    # determine range of input values
+    input_range = imax - imin
+    output_range = fmax - fmin
 
-    x = (output16 - fmin) * factor
-    return test
+    print("ranges: ")
+    print("input: ", input_range)
+    print("output: ", output_range)
+    # mapping factor
+    mf = (input_range / output_range)
+    print("mf: ", mf)
+    print("int scaled min", ((fmin - fmin) * mf))  # * or / and why
+    print("int scaled max", ((fmax - fmin) * mf))
+    calc = (byte_array - fmin) / mf
+    return calc
 
 
-def __save_result(byte_array, name):
-    #################################################
-    #      Show result
-    #################################################
-    # Show result
-    # plt.imshow(byte_array, cmap='gray')
-
-    # convert
-    output16 = __convert(byte_array)
-    plt.imshow(output16, cmap='gray')
-    plt.show()
-
-    # plt.imsave(new, output16, cmap='gray', format="png")  # original resolution
-    # image_pil.save(new)
+def __save_result(byte_array, name, path=""):
     new = f"z_{name}{__Config.output_file}.png"
-    # print(f"saved as: [{new}]")
+    plt.imsave(path + new, byte_array, cmap='gray', format="png")  # original resolution
+    print(f"saved as: [{new}]")
 
 
 def __setup(parameter):
@@ -279,12 +252,41 @@ def generate(options):
     __setup(options)
     for image in __Config.image_paths:
         depth_map = __generate_image(image)
+        # ToDo convert image to 16 bit single channel gray scale
         __save_result(depth_map, os.path.split(image)[1].split('.')[0])
 
 
 def dry():
+    print("### Dry run ###")
+
+    __Config.output_file = ""
+
+    # Load working depth map
+    import imageio
+    img = imageio.imread('PointCloud/depth/00000.png')
+    redwood = np.asarray(img)
+
     depth_map = np.load('z_1_binary.npy')
-    __save_result(depth_map, 'z_1_tmp')
+
+    # convert
+    output16 = __convert(depth_map)
+    width = 640  # 3480
+    height = 480  # 4640
+    scale = np.zeros((height, width), np.uint16)
+    for i in range(height):
+        scale[i] = np.ones((1, width), np.uint16) * i
+
+    #for i in range(len(output16)):
+    #    for j in range(len(output16[0])):
+    #        output16[i][j] = 0
+    print(scale)
+    #print(output16)
+
+    # Show result
+    plt.imshow(scale, cmap='gray')
+    plt.show()
+
+    __save_result(scale, 'dry', "PointCloud/depth/")
 
 
 def __cli_main():
