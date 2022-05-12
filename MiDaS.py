@@ -5,10 +5,14 @@ import getopt     # Handle named cli parameter
 import os         # Handle platform independent paths
 import time       # Measure execution time
 import re         # Utilize RegEx
+from PIL import Image
+
+import MiDaS
 import Tools      # Custom helpful functions
 
 import numpy as np
 # import png
+import imageio
 
 # MiDaS dependencies
 import cv2
@@ -58,7 +62,7 @@ def __load_files(expression):
     path = parts[0]
     files = os.listdir(path)
 
-    # ToDo: ius this where optimization can be con using filter and apply a funtion on every match?
+    # ToDo: use this where optimization can be done using filter and apply a funtion on every match?
     # if so using maps and filter together maybe what i looked for
     image_paths = []
     for file in files:
@@ -89,6 +93,9 @@ def __select_model(_input):
     #      Load a model
     #      (see https://github.com/isl-org/MiDaS#Accuracy for an overview)
     #######################################################################
+    if _input is None:
+        __Config.model = "MiDaS_small"
+        return
     if _input.lower() in ("large", "dpt_large"):
         # MiDaS v3 - Large     (highest accuracy, slowest inference speed)
         __Config.model = "DPT_Large"
@@ -159,80 +166,90 @@ def __generate_image(original_image):
     return output
 
 
-# ToDo: don't change parameter (pass copy not reference)
-# Funny image if I sort the array
-def _max(array):
-    copy = array.copy()
-    copy[-1].sort()
-    return copy[-1][-1]
-
-
-def _min(array):
-    copy = array.copy()
-    copy[0].sort()
-    return copy[0][0]
-
-
 # ToDo wip
-def __convert(byte_array):
-    # Must save as 16 bit single channel image
-    # plt.imsave(subject + "_z." + "png", output, cmap='gray', format="png") # original resolution
+# Convert and scale to a (16 bit) unsigned integer and normalize it
+def __convert(byte_array, _type=np.uint16, _from=None, _to=None):
+    print("########## __convert ##########")
+    # Must save as 16 bit single channel image. unclear if integer or float
     # It ust be saved in gray scale with 1 channel to properly work later
-    # print(f"Depth map saved under ./{subject}_z.png")
 
-    output16 = np.array(byte_array, np.uint16)
-    # output16 = np.array(byte_array)
+    input_min = byte_array.min()
+    input_max = byte_array.max()
 
-    print("extremes")
-    # print("what is faster")
-    # Tools.cmp_runtime(_min, np.min, byte_array)
-    minimum = byte_array.min()
-    maximum = byte_array.max()
-    print("min", minimum)
-    print("max", maximum)
+    input_range = input_max - input_min
+    # print("Input data:")
+    # print("Input type: ", type(byte_array[0][0]))
+    # print("Input min value: ", input_min)
+    # print("Input max value: ", input_max)
+    # print("Range: ", input_range)
+    # print("\n")
 
-    print("Array: ")
-    print(f"len(byte_array): {len(byte_array)} \nlen(byte_array[0]): {len(byte_array[0])}")
+    # print("Array: ")
+    # print(f"len(byte_array): {len(byte_array)} \nlen(byte_array[0]): {len(byte_array[0])}")
 
-    # map [fmin; fmax] to [imin-imax]
-    fmax = maximum
-    fmin = minimum
+    output_min = _from
+    output_max = _to
+    if _from is None:
+        print("Why is _from none?", _from)
+        output_min = Tools.limits(_type).min  # np.iinfo(_type).min
+        output_max = Tools.limits(_type).max  # np.iinfo(_type).max
 
-    # print(np.iinfo(output16[0][0].dtype).max)
-    print(type(byte_array[0][0]))
-    imax = 65535
-    imin = 0
+    output_range = output_max - output_min
+    # print("Output data:")
+    # print("Conversion Type: ", _type)
+    # print("Type min value: ", limits(_type).min)
+    # print("Type max value: ", limits(_type).max)
+    # print("Range: ", output_range)
+    # print(f"From {output_min} to {output_max}")
+    # print("\n")
 
-    factor = (imax - imin) / ((fmax - fmin))
-    # data = np.array([np.arange(fmin, fmax + 1, 1.0), np.arange(fmin, fmax + 1, 1.0), np.arange(fmin, fmax + 1, 1.0)], dtype=np.float32)
-    # dataD = np.array(dataD, dtype=np.uint16)
+    # this might only work for [0; x] output range
+    # does it work for [-5;5] and [-1;9] and [0-10] mapped mixed to same ranges but * 10:
+    # [-5;5] => [-50; 50]; [-5;5] => [-10; 90]
 
-    # offset so ot goes from 0 to max
-    test = byte_array - minimum
-    # recalculate max to be 65535
-    test = test * (maximum / imax)
+    # factor to map [fmin, fmax] to [imin, imax]
+    # input_value * mf = mapped_output_value
+    mf = (output_range / input_range)
 
-    # this might only work for 0-x putput range, does it work for [-5;5] and [-1;9] and [0-10] mapped mixed to same * 10
-    # determine range of input values
-    input_range = imax - imin
-    output_range = fmax - fmin
+    # Sanity check
+    _round = 6
+    mapped_min = np.round((input_min - input_min) * mf, _round)
+    mapped_max = np.round((input_max - input_min) * mf, _round)
+    # print("Sanity Check:")
+    # print(f"Factor: [{mf}]")
+    # print(f"Round to {_round} decimal")
+    # print(f"Scale/Map input [{input_min}] to output [{output_min}] \n "
+    #       f"\t calculated input[{mapped_min}] == output[{output_min}] : {mapped_min == output_min}")
+    # print(f"Scale/Map input [{input_max}] to output [{output_max}] \n"
+    #       f"\t calculated output[{mapped_max}] == output[{output_max}] : {mapped_max == output_max}")
+    if not (mapped_min == output_min):
+        Tools.error_print(__convert.__name__, "Could not Map input min value to output min value")
+        exit()
+    if not (mapped_max == output_max):
+        Tools.error_print(__convert.__name__, "Could not Map input max value to output max value")
+        exit()
 
-    print("ranges: ")
-    print("input: ", input_range)
-    print("output: ", output_range)
-    # mapping factor
-    mf = (input_range / output_range)
-    print("mf: ", mf)
-    print("int scaled min", ((fmin - fmin) * mf))  # * or / and why
-    print("int scaled max", ((fmax - fmin) * mf))
-    calc = (byte_array - fmin) / mf
-    return calc
+    print(f"converted {type(byte_array[0][0])} to {_type}")
+    # ToDo: round here too?
+    output = np.array((byte_array - input_min) * mf, _type)
+    if type(output[0][0]) != _type:
+        print("new array is not proper type...")
+        print("should: ", _type)
+        print("is: ", type(output[0][0]))
+        exit()
+    # Invert values
+    # output = output_max - output
+    return output
 
 
 def __save_result(byte_array, name, path=""):
-    new = f"z_{name}{__Config.output_file}.png"
-    plt.imsave(path + new, byte_array, cmap='gray', format="png")  # original resolution
-    print(f"saved as: [{new}]")
+    new_file = f"z_{name}{__Config.output_file}.png"
+    # plt.imsave(path + new, byte_array, cmap='gray', format="png")  # original resolution
+    img = Image.fromarray(byte_array, "I")
+    img.save(path + new_file)
+    # imageio.imwrite(path + new_file, byte_array, "png")
+    print(f"saved as: [{new_file}] under {path}")
+    # print(f"Depth map saved under ./{subject}_z.png")
 
 
 def __setup(parameter):
@@ -249,6 +266,8 @@ def __setup(parameter):
 
 
 def generate(options):
+    print("Received following parameter:")
+    print(options)
     __setup(options)
     for image in __Config.image_paths:
         depth_map = __generate_image(image)
@@ -256,37 +275,77 @@ def generate(options):
         __save_result(depth_map, os.path.split(image)[1].split('.')[0])
 
 
+# ToDo; Wip fix border or discard completely
+def __generate_scale_image(width, height, data_type, _range=None):
+    if _range is None:
+            _range = range(0, height, 1)
+    _from = Tools.limits(data_type).min
+    _to = Tools.limits(data_type).max
+    # generate gradient image from 0 to image height with given step
+    scale = np.zeros((height, width), data_type)
+    border_width = 1
+    border_value = 1
+    # print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+    for i in range(_range.start, _range.stop):
+        print(i)
+        row = np.ones((1, width), data_type) * (i * _range.step)
+        row[0][-border_width:width] = np.ones((1, border_width), data_type) * border_value
+        row[0][0:border_width] = np.ones((1, border_width), data_type) * border_value
+        scale[i] = row
+    scale[0:border_width] = np.ones((border_width, width), data_type) * border_value
+    scale[-border_width:width] = np.ones((border_width, width), data_type) * border_value
+    print(scale)
+    # print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+    # exit()
+    return scale
+
+
 def dry():
-    print("### Dry run ###")
-
+    print("########## Dry run ##########")
     __Config.output_file = ""
+    data_type = np.float32
 
-    # Load working depth map
-    import imageio
-    img = imageio.imread('PointCloud/depth/00000.png')
-    redwood = np.asarray(img)
+    # Load/Generate depth map
+    case = "hand"
+    depth_map = None
+    if case == "hand":
+        depth_map = np.load('z_1_binary.npy')
+    elif case == "scale":
+        # scale = __generate_scale_image(3480, 4640, data_type)
+        depth_map = __generate_scale_image(640, 480, data_type, range(0, 480, 2))
+    elif case == "stool":
+        img = Image.open("PointCloud/depth/00000.png")
+        depth_map = np.array(img)
+    elif case == "generate":
+        options = {
+            __Config.Model: "large",
+            __Config.Output: "dry_gen",
+            __Config.Images: "PointCloud/color/00000.jpg"
+        }
+        MiDaS.generate(options)
+        exit()
+    elif case == "mstool":
+        img = Image.open("PointCloud/depth/z_00000.png")
+        depth_map = np.array(img)
+    else:
+        print("No case in dry run in MiDaS")
+        exit()
 
-    depth_map = np.load('z_1_binary.npy')
+    print("depth map:")
+    print(depth_map)
 
     # convert
-    output16 = __convert(depth_map)
-    width = 640  # 3480
-    height = 480  # 4640
-    scale = np.zeros((height, width), np.uint16)
-    for i in range(height):
-        scale[i] = np.ones((1, width), np.uint16) * i
-
-    #for i in range(len(output16)):
-    #    for j in range(len(output16[0])):
-    #        output16[i][j] = 0
-    print(scale)
-    #print(output16)
+    # output16 = __convert(depth_map)
+    scaled = __convert(depth_map, np.uint32, 0, 100)
+    print("converted depth map:")
+    print(scaled)
 
     # Show result
-    plt.imshow(scale, cmap='gray')
-    plt.show()
+    # plt.imshow(scale, cmap='gray')
+    # plt.show()
 
-    __save_result(scale, 'dry', "PointCloud/depth/")
+    # Save result ot file [z_dry{__Config.output_file}.png]
+    __save_result(scaled, 'dry', "PointCloud/depth/")
 
 
 def __cli_main():
@@ -342,6 +401,5 @@ def __cli_main():
     generate(parameter)
 
 
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     __cli_main()

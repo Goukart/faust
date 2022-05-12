@@ -92,3 +92,17 @@ def cmp_runtime(old, opt, parameter, n=10):
         quality = "faster"
         percent = (100 / opt) * old
     print(f"optimization is {np.round(percent)}% {quality} than initial procedure")
+
+
+def limits(data_type):
+    value = data_type(1)
+    if isinstance(value, (int, np.integer)):
+        # print("int")
+        return np.iinfo(data_type)
+    elif isinstance(value, (float, np.floating)):
+        # print("float")
+        return np.finfo(data_type)
+    else:
+        message = f"Provided Type [{data_type}] does not match any integer or floating point."
+        error_print(limits.__name__, message)
+        exit()

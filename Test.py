@@ -10,7 +10,7 @@ def convert_to_1_ch_grayscale(image_path):
     # ToDo, make sure it is gray scale and 16 bit (and if it really has to be)
     img = PIL.Image.open(image_path)
 
-    img = img.convert('L')
+    # img = img.convert('L', colors=2000)
     print(img)
     plt.imshow(img)  # cmap='gray'
     plt.show()
@@ -22,10 +22,10 @@ def convert_to_1_ch_grayscale(image_path):
 
 
 def depth_map_to_point_cloud():
-    # color_img_path = "color/4.jpg"
-    # depth_img_path = "depth/4_z-tmp.png"
-    color_img_path = "PointCloud/color/1-.jpg"
-    depth_img_path = convert_to_1_ch_grayscale("PointCloud/depth/z_dry.png")
+    # Seems like rgb image has to be rgb
+    color_img_path = "PointCloud/color/1.jpg"
+    depth_img_path = "PointCloud/depth/z_dry.png"
+    # depth_img_path = "PointCloud/depth/z_dry.png"
 
     color_raw = o3d.io.read_image(color_img_path)
     depth_raw = o3d.io.read_image(depth_img_path)
@@ -47,7 +47,7 @@ def depth_map_to_point_cloud():
     # self, color, depth, depth_scale=1000.0, depth_trunc=3.0, convert_rgb_to_intensity=True
     # rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(color_raw, depth_raw, 0.001, 300.)
     # Image has to be spesific resolution (x,y)
-    rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(color_raw, depth_raw)
+    rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(color_raw, depth_raw, 1., 65000)
 
     plt.subplot(1, 2, 1)
     plt.title('Hand grayscale image')
