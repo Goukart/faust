@@ -63,3 +63,21 @@ class PointCloud:
         # Now we can pass that variable using the `scene` argument when we call the plot function on our sampled point
         # cloud:
         anky_cloud_sample.plot(initial_point_size=0.05, scene=scene)
+
+
+# Fist try to understand point clouds, and create a plane in the middle and delete one side
+def remove(plane):
+    # Read point cloud from PLY
+    pcd1 = open3d.io.read_point_cloud("1.ply")
+    points = np.asarray(pcd1.points)
+
+    # Sphere center and radius
+    center = np.array([1.586, -8.436, -0.242])
+    radius = 0.5
+
+    # Calculate distances to center, set new points
+    distances = np.linalg.norm(points - center, axis=1)
+    pcd1.points = open3d.utility.Vector3dVector(points[distances <= radius])
+
+    # Write point cloud out
+    return

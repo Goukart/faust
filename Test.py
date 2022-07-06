@@ -47,7 +47,8 @@ def depth_map_to_point_cloud():
     # self, color, depth, depth_scale=1000.0, depth_trunc=3.0, convert_rgb_to_intensity=True
     # rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(color_raw, depth_raw, 0.001, 300.)
     # Image has to be spesific resolution (x,y)
-    rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(color_raw, depth_raw, 1., 65000)
+    rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(color_raw, depth_raw)#, 1., 65000)
+    print(rgbd_image)
 
     plt.subplot(1, 2, 1)
     plt.title('Hand grayscale image')

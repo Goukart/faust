@@ -2,6 +2,7 @@
 import MiDaS
 from PointCloud.PointCloud import PointCloud
 import Test
+# import mic
 from enum import Enum
 
 
@@ -15,7 +16,8 @@ def service_pc():
     # pc.call()
     # MiDaS.generate("./images/1", "large", "tmp")
     MiDaS.dry()
-    Test.run()  # must also reduce points, high res images have way too many points, convert to layers maybe?
+    # Test.run()  # must also reduce points, high res images have way too many points, convert to layers maybe?
+    # mic.main()
 
 
 def main():
@@ -24,3 +26,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# pip freeze > requirements.txt
+# https://qavalidation.com/2021/01/how-to-create-use-requirements-txt-for-python-projects.html/
+# https://learnpython.com/blog/python-requirements-file/

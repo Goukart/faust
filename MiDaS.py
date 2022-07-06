@@ -334,6 +334,16 @@ def dry():
     print("depth map:")
     print(depth_map)
 
+    # Here a quick interception to test
+    depth_map = cv2.normalize(depth_map, None, 0, 1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32FC1)
+    Q = 
+    points_3D = cv2.reprojectImageTo3D(depth_map, Q, handleMissingValues=False)
+
+    __save_result(depth_map, 'dry', "PointCloud/depth/")
+
+
+    return
+    # End of interception
     # convert
     # output16 = __convert(depth_map)
     scaled = __convert(depth_map, np.uint32, 0, 100)
