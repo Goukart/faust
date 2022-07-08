@@ -106,3 +106,31 @@ def limits(data_type):
         message = f"Provided Type [{data_type}] does not match any integer or floating point."
         error_print(limits.__name__, message)
         exit()
+
+
+# ToDo: which format works and does not lose resolution?
+def export_bytes_to_image(byte_array, name, path=""):
+    # import png
+    import imageio
+    # from PIL import Image
+    # import cv2
+    # import matplotlib.pyplot as plt
+
+    new_file = f"z_{name}.png"
+
+    # Save image
+    # With matplotlib
+    # plt.imsave(path + new_file, byte_array, cmap='gray', format="png")  # original resolution
+
+    # With PIL Image
+    # img = Image.fromarray(byte_array, "I")
+    # img.save(path + new_file)
+
+    # With imageio
+    imageio.imwrite(path + new_file, byte_array, "png")
+
+    # With cv
+    # cv2.imwrite(path + new_file, byte_array)
+
+    print(f"saved as: [{new_file}] under {path}")
+    # print(f"Depth map saved under ./{subject}_z.png")

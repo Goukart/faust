@@ -3,7 +3,11 @@ import numpy as np
 from matplotlib import pyplot as plt
 import PIL
 from PIL import Image
-import png
+
+# Maybe temp
+import MiDaS
+from MiDaS import __Config
+import Tools
 
 
 def convert_to_1_ch_grayscale(image_path):
@@ -21,10 +25,10 @@ def convert_to_1_ch_grayscale(image_path):
     return new
 
 
-def depth_map_to_point_cloud():
+def depth_map_to_point_cloud(file):
     # Seems like rgb image has to be rgb
-    color_img_path = "PointCloud/color/1.jpg"
-    depth_img_path = "PointCloud/depth/z_dry.png"
+    color_img_path = f"PointCloud/color/{file}.jpg"
+    depth_img_path = f"PointCloud/depth/z_{file}.png"
     # depth_img_path = "PointCloud/depth/z_dry.png"
 
     color_raw = o3d.io.read_image(color_img_path)
@@ -47,14 +51,14 @@ def depth_map_to_point_cloud():
     # self, color, depth, depth_scale=1000.0, depth_trunc=3.0, convert_rgb_to_intensity=True
     # rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(color_raw, depth_raw, 0.001, 300.)
     # Image has to be spesific resolution (x,y)
-    rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(color_raw, depth_raw)#, 1., 65000)
+    rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(color_raw, depth_raw, 1.0, 65000)
     print(rgbd_image)
 
     plt.subplot(1, 2, 1)
-    plt.title('Hand grayscale image')
+    plt.title('grayscale image')
     plt.imshow(rgbd_image.color)
     plt.subplot(1, 2, 2)
-    plt.title('Hand depth image')
+    plt.title('depth image')
     plt.imshow(rgbd_image.depth)
     plt.show()
 
@@ -72,6 +76,74 @@ def depth_map_to_point_cloud():
     pcd.transform([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
 
     o3d.visualization.draw_geometries([pcd])  # visualize the point cloud
+
+
+def pick(case, data_type):
+    if case == "hand":
+        return np.load('z_1_binary.npy')
+    elif case == "stool":
+        img = Image.open("PointCloud/depth/00000.png")
+        return np.array(img)
+    elif case == "generate":
+        options = {
+            __Config.Model: "large",
+            __Config.Output: "dry_gen",
+            __Config.Images: "PointCloud/color/face.jpg"
+        }
+        MiDaS.generate(options)
+        exit()
+    elif case == "mstool":
+        img = Image.open("PointCloud/depth/z_00000.png")
+        return np.array(img)
+    elif case == "chess":
+        img = Image.open("PointCloud/depth/z_dry.png")
+        return np.array(img)
+    else:
+        print("No case in dry run in MiDaS")
+        print("Try to generate new")
+        options = {
+            __Config.Model: "large",
+            __Config.Output: f"dry_{case}",
+            __Config.Images: f"PointCloud/color/{case}.jpg"
+        }
+        img = Image.open(f"PointCloud/color/{case}")
+        depth_map = MiDaS.__generate_image(img)
+        name = f"PointCloud/depth/{__Config.output_file}"
+        Tools.export_bytes_to_image(depth_map, name)
+        exit()
+
+
+def dry(case):
+    print("########## Dry run ##########")
+    __Config.output_file = ""
+    data_type = np.float32
+
+    # Load/Generate one of the depth maps
+    depth_map = pick(case, data_type)
+
+    print("depth map:")
+    print(depth_map)
+
+    # Here a quick interception to test
+    # depth_map = cv2.normalize(depth_map, None, 0, 1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32FC1)
+    # points_3D = cv2.reprojectImageTo3D(depth_map, Q, handleMissingValues=False)
+
+    # __save_result(depth_map, f"dry{__Config.output_file}", "PointCloud/depth/")
+    return depth_map
+    # End of interception
+
+    # convert
+    # output16 = __convert(depth_map)
+    scaled = __convert(depth_map, np.uint32, 0, 100)
+    print("converted depth map:")
+    print(scaled)
+
+    # Show result
+    # plt.imshow(scale, cmap='gray')
+    # plt.show()
+
+    # Save result ot file [z_dry{__Config.output_file}.png]
+    __save_result(scaled, f"dry{__Config.output_file}", "PointCloud/depth/")
 
 
 def redwood(file):
@@ -108,8 +180,8 @@ def redwood(file):
     o3d.visualization.draw_geometries([pcd])  # visualize the point cloud
 
 
-def run():
-    depth_map_to_point_cloud()
+def run(case):
+    depth_map_to_point_cloud(case)
     # redwood("00000")
 
 

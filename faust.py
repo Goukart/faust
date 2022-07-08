@@ -1,5 +1,6 @@
 # import PointCloud.PointCloud as pcl
 import MiDaS
+import Tools
 from PointCloud.PointCloud import PointCloud
 import Test
 # import mic
@@ -15,8 +16,10 @@ def service_pc():
     # pc = PointCloud()
     # pc.call()
     # MiDaS.generate("./images/1", "large", "tmp")
-    MiDaS.dry()
-    # Test.run()  # must also reduce points, high res images have way too many points, convert to layers maybe?
+    case = "chess"
+    # depth_map = Test.dry(case)
+    # Tools.export_bytes_to_image(depth_map, case, "PointCloud/depth/")
+    Test.run(case)  # must also reduce points, high res images have way too many points, convert to layers maybe?
     # mic.main()
 
 

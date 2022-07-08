@@ -7,18 +7,23 @@ import time       # Measure execution time
 import re         # Utilize RegEx
 from PIL import Image
 
-import MiDaS
 import Tools      # Custom helpful functions
 
 import numpy as np
-# import png
-import imageio
 
 # MiDaS dependencies
 import cv2
 import torch
-import matplotlib.pyplot as plt
-# ToDo: build in fail safes in every funtions, check parameter for correctness, so functions can be used freely
+# ToDo: build in fail-safes in every functions, check parameter for correctness, so functions can be used freely
+
+# ToDo: Final cleanup
+#############################################################################
+#
+#           This Module sole purpose is to generate a depth map
+#           Any additional functionalities should be removed
+#           Load one or many files -> generate -> export results?
+#
+#############################################################################
 
 
 class __Config:
@@ -48,6 +53,19 @@ class __Config:
     output_file = None
 
 
+def __setup(parameter):
+    # Load files that, match given expression, into array
+    # ToDo: here make sure those check input parameter
+    __load_files(parameter.get(__Config.Images))
+    __select_model(parameter.get(__Config.Model))
+
+    # Set of the output file
+    if parameter.get(__Config.Output) is None:
+        __Config.output = ""
+    else:
+        __Config.output = f"_{parameter.get(__Config.Output)}"
+
+
 # Load all files as paths into an array
 def __load_files(expression):
     # ToDo test if works on Windows, using '\' as path seperator
@@ -62,7 +80,7 @@ def __load_files(expression):
     path = parts[0]
     files = os.listdir(path)
 
-    # ToDo: use this where optimization can be done using filter and apply a funtion on every match?
+    # ToDo: use this where optimization can be done using filter and apply a funktion on every match?
     # if so using maps and filter together maybe what i looked for
     image_paths = []
     for file in files:
@@ -131,7 +149,7 @@ def __generate_image(original_image):
     #      Generate Depth Map
     #
     #######################################################################
-    # time exectution:
+    # time execution:
     start = time.time()
 
     # Load transforms to resize and normalize the image for large or small model
@@ -242,120 +260,17 @@ def __convert(byte_array, _type=np.uint16, _from=None, _to=None):
     return output
 
 
-def __save_result(byte_array, name, path=""):
-    new_file = f"z_{name}{__Config.output_file}.png"
-    # plt.imsave(path + new, byte_array, cmap='gray', format="png")  # original resolution
-    img = Image.fromarray(byte_array, "I")
-    img.save(path + new_file)
-    # imageio.imwrite(path + new_file, byte_array, "png")
-    print(f"saved as: [{new_file}] under {path}")
-    # print(f"Depth map saved under ./{subject}_z.png")
-
-
-def __setup(parameter):
-    # Load files that, match given expression, into array
-    # ToDo: here make sure those check input parameter
-    __load_files(parameter.get(__Config.Images))
-    __select_model(parameter.get(__Config.Model))
-
-    # Set of the output file
-    if parameter.get(__Config.Output) is None:
-        __Config.output = ""
-    else:
-        __Config.output = f"_{parameter.get(__Config.Output)}"
-
-
 def generate(options):
     print("Received following parameter:")
     print(options)
+
     __setup(options)
+
     for image in __Config.image_paths:
         depth_map = __generate_image(image)
         # ToDo convert image to 16 bit single channel gray scale
-        __save_result(depth_map, os.path.split(image)[1].split('.')[0])
-
-
-# ToDo; Wip fix border or discard completely
-def __generate_scale_image(width, height, data_type, _range=None):
-    if _range is None:
-            _range = range(0, height, 1)
-    _from = Tools.limits(data_type).min
-    _to = Tools.limits(data_type).max
-    # generate gradient image from 0 to image height with given step
-    scale = np.zeros((height, width), data_type)
-    border_width = 1
-    border_value = 1
-    # print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-    for i in range(_range.start, _range.stop):
-        print(i)
-        row = np.ones((1, width), data_type) * (i * _range.step)
-        row[0][-border_width:width] = np.ones((1, border_width), data_type) * border_value
-        row[0][0:border_width] = np.ones((1, border_width), data_type) * border_value
-        scale[i] = row
-    scale[0:border_width] = np.ones((border_width, width), data_type) * border_value
-    scale[-border_width:width] = np.ones((border_width, width), data_type) * border_value
-    print(scale)
-    # print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-    # exit()
-    return scale
-
-
-def dry():
-    print("########## Dry run ##########")
-    __Config.output_file = ""
-    data_type = np.float32
-
-    # Load/Generate depth map
-    case = "hand"
-    depth_map = None
-    if case == "hand":
-        depth_map = np.load('z_1_binary.npy')
-    elif case == "scale":
-        # scale = __generate_scale_image(3480, 4640, data_type)
-        depth_map = __generate_scale_image(640, 480, data_type, range(0, 480, 2))
-    elif case == "stool":
-        img = Image.open("PointCloud/depth/00000.png")
-        depth_map = np.array(img)
-    elif case == "generate":
-        options = {
-            __Config.Model: "large",
-            __Config.Output: "dry_gen",
-            __Config.Images: "PointCloud/color/00000.jpg"
-        }
-        MiDaS.generate(options)
-        exit()
-    elif case == "mstool":
-        img = Image.open("PointCloud/depth/z_00000.png")
-        depth_map = np.array(img)
-    else:
-        print("No case in dry run in MiDaS")
-        exit()
-
-    print("depth map:")
-    print(depth_map)
-
-    # Here a quick interception to test
-    depth_map = cv2.normalize(depth_map, None, 0, 1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32FC1)
-    Q = 
-    points_3D = cv2.reprojectImageTo3D(depth_map, Q, handleMissingValues=False)
-
-    __save_result(depth_map, 'dry', "PointCloud/depth/")
-
-
-    return
-    # End of interception
-    # convert
-    # output16 = __convert(depth_map)
-    scaled = __convert(depth_map, np.uint32, 0, 100)
-    print("converted depth map:")
-    print(scaled)
-
-    # Show result
-    # plt.imshow(scale, cmap='gray')
-    # plt.show()
-
-    # Save result ot file [z_dry{__Config.output_file}.png]
-    __save_result(scaled, 'dry', "PointCloud/depth/")
+        name = f"{os.path.split(image)[1].split('.')[0]}{__Config.output_file}"
+        Tools.export_bytes_to_image(depth_map, name)
 
 
 def __cli_main():
