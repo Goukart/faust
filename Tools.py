@@ -116,7 +116,7 @@ def export_bytes_to_image(byte_array, name, path=""):
     # import cv2
     # import matplotlib.pyplot as plt
 
-    new_file = f"z_{name}.png"
+    new_file = f"{name}.png"
 
     # Save image
     # With matplotlib

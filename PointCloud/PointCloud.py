@@ -1,4 +1,6 @@
 from pyntcloud import PyntCloud
+import numpy as np
+import open3d
 
 import ipywidgets as widgets
 from ipywidgets import interact, interact_manual

@@ -6,7 +6,6 @@ from PIL import Image
 
 # Maybe temp
 import MiDaS
-from MiDaS import __Config
 import Tools
 
 
@@ -85,12 +84,10 @@ def pick(case, data_type):
         img = Image.open("PointCloud/depth/00000.png")
         return np.array(img)
     elif case == "generate":
-        options = {
-            __Config.Model: "large",
-            __Config.Output: "dry_gen",
-            __Config.Images: "PointCloud/color/face.jpg"
-        }
-        MiDaS.generate(options)
+        model = "large"
+        name = "dry_gen"
+        regex = "PointCloud/color/face.jpg"
+        MiDaS.generate_dms(regex, model, name)
         exit()
     elif case == "mstool":
         img = Image.open("PointCloud/depth/z_00000.png")
@@ -101,21 +98,17 @@ def pick(case, data_type):
     else:
         print("No case in dry run in MiDaS")
         print("Try to generate new")
-        options = {
-            __Config.Model: "large",
-            __Config.Output: f"dry_{case}",
-            __Config.Images: f"PointCloud/color/{case}.jpg"
-        }
         img = Image.open(f"PointCloud/color/{case}")
-        depth_map = MiDaS.__generate_image(img)
-        name = f"PointCloud/depth/{__Config.output_file}"
+        name = f"dry_{case}"
+        depth_map = MiDaS.generate_dms(img, "large", name)
+
         Tools.export_bytes_to_image(depth_map, name)
         exit()
 
 
 def dry(case):
     print("########## Dry run ##########")
-    __Config.output_file = ""
+    MiDaS.output_name = ""
     data_type = np.float32
 
     # Load/Generate one of the depth maps
