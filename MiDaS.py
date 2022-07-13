@@ -1,13 +1,15 @@
-import sys        # Handle cli parameter
-import getopt     # Handle named cli parameter
-import os         # Handle platform independent paths
-import time       # Measure execution time
-import re         # Utilize RegEx
-import Tools      # Custom helpful functions
+import sys  # Handle cli parameter
+import getopt  # Handle named cli parameter
+import os  # Handle platform independent paths
+import time  # Measure execution time
+import re  # Utilize RegEx
+import Tools  # Custom helpful functions
 
 # MiDaS dependencies
 import cv2
 import torch
+
+
 # ToDo: build in fail-safes in every functions, check parameter for correctness, so functions can be used freely
 
 # ToDo: Final cleanup
@@ -137,6 +139,12 @@ def __generate_depth_map(original_image, _model):
 
 
 def generate_dms(_images_regex, _model, _out=None):
+    """
+    :param _images_regex: Regular expression to "select" images
+    :param _model: Which model MiDaS uses
+    :param _out: Name of the output file
+    :return: Generates depth maps and returns them as byte arrays in a dictionary with the name as the key
+    """
     output_prefix = "z_"
 
     # Load and process images
@@ -144,11 +152,13 @@ def generate_dms(_images_regex, _model, _out=None):
     # Load files that match expression into array
     images_as_paths = __load_files(_images_regex)
 
+    output = f"{_out} -> {output_prefix}<original_file_name>" if _out is None else _out
+    # output = lambda o: f"{o} -> {output_prefix}<original_file_name>" if o is None else o
     print(f"\n___________________________________________________________________\n"
           f"All given parameters:\n"
           f"RegEx:\t{_images_regex}\n"
           f"Images:\t{images_as_paths}\n"
-          f"Output:\t{_out}\n"
+          f"Output:\t{output}\n"
           f"Model:\t{_model}\n"
           f"___________________________________________________________________\n")
     # Generate each image
@@ -164,7 +174,7 @@ def generate_dms(_images_regex, _model, _out=None):
             i += 1
 
         print("image: ", image)
-        print(f"generated image with name: [{name}]")
+        print(f"generated image with name/key: [{name}]")
         # Tools.export_bytes_to_image(depth_map, name)
         depth_maps[name] = depth_map
 

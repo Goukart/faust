@@ -1,13 +1,17 @@
 # import PointCloud.PointCloud as pcl
+import imageio
+
 import MiDaS
 import Tools      # Custom helpful functions
 # from PointCloud.PointCloud import PointCloud
-# import Test
+import Test
 # import mic
 import numpy as np
+from matplotlib import pyplot as plt
 
 
 # Orchestrate all the Modules
+# ToDo: pipe.sh should convert all input images to png
 
 # ToDo wip
 # Convert and scale to a (16 bit) unsigned integer and normalize it
@@ -89,18 +93,68 @@ depth_images = "PointCloud/depth/"
 color_images = "PointCloud/color/"
 
 
+def quick_dm(name: str):
+    # dm = Test.__generate_scale_image(3480, 4640, np.float32)
+    dm = MiDaS.generate_dms(f"{color_images}{name}.*", "large")
+    key = f"z_{name}"
+    # print("Type of depth map: ", type(dm[key]))
+    # print(dm)
+    Tools.export_bytes_to_image(dm[key], key, depth_images)
+
+
 def service_pc():
     # pc = PointCloud()
     # pc.call()
     # MiDaS.generate("./images/1", "large", "tmp")
-    case = "chess"
-    # depth_map = Test.dry(case)
-    # Tools.export_bytes_to_image(depth_map, case, "PointCloud/depth/")
-    # Test.run(case)  # must also reduce points, high-res images have way too many points, convert to layers maybe?
-    dms = MiDaS.generate_dms(f"PointCloud/color/face.*", "large")
-    # MiDaS.generate_dms(f"PointCloud/color/face.*", "large", "filename")
 
+    ####################################################################
+    #
+    #           Test to see what datatype the depth map has
+    #
+    ####################################################################
+    # dm = MiDaS.generate_dms(f"{color_images}chess.jpg", "large")
+    # print("Type of depth map: ", type(dm["z_chess"]))
+    # print(dm)
+
+    ####################################################################
+    #
+    #           Photogrammetry
+    #
+    ####################################################################
     # mic.main()
+
+    ####################################################################
+    #
+    #           Generate Depth Map
+    #
+    ####################################################################
+    case = "arm"
+
+    # Test.dry(case)
+    #depth_map = Test.__generate_scale_image(5184, 3456, np.float32)  # , _range=None)
+    # dms = MiDaS.generate_dms(f"PointCloud/color/face.*", "large", "filename")
+    #quick_dm(case)
+    # Tools.export_bytes_to_image(depth_map, "z_chess", depth_images)
+    # exit()
+
+    ####################################################################
+    #
+    #           Create Point Cloud
+    #
+    ####################################################################
+    # must also reduce points, high-res images have way too many points, convert to layers maybe?
+
+    # color = imageio.imread(f"{color_images}{case}.jpg")
+
+    Test.depth_map_to_point_cloud(case)
+
+    #plt.subplot(1, 2, 1)
+    #plt.title('color image')
+    #plt.imshow(color)
+    #plt.subplot(1, 2, 2)
+    #plt.title('depth image')
+    #plt.imshow(depth_map)
+    #plt.show()
 
 
 def main():

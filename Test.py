@@ -9,6 +9,31 @@ import MiDaS
 import Tools
 
 
+# ToDo; Wip fix border or discard completely
+def __generate_scale_image(width, height, data_type, _range=None):
+    if _range is None:
+            _range = range(0, height, 1)
+    _from = Tools.limits(data_type).min
+    _to = Tools.limits(data_type).max
+    # generate gradient image from 0 to image height with given step
+    scale = np.zeros((height, width), data_type)
+    border_width = 1
+    border_value = 1
+    # print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+    for i in range(_range.start, _range.stop):
+        # print(i)
+        row = np.ones((1, width), data_type) * (i * _range.step)
+        row[0][-border_width:width] = np.ones((1, border_width), data_type) * border_value
+        row[0][0:border_width] = np.ones((1, border_width), data_type) * border_value
+        scale[i] = row
+    scale[0:border_width] = np.ones((border_width, width), data_type) * border_value
+    scale[-border_width:width] = np.ones((border_width, width), data_type) * border_value
+    print(scale)
+    # print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+    # exit()
+    return scale
+
+
 def convert_to_1_ch_grayscale(image_path):
     # ToDo, make sure it is gray scale and 16 bit (and if it really has to be)
     img = PIL.Image.open(image_path)
@@ -26,13 +51,15 @@ def convert_to_1_ch_grayscale(image_path):
 
 def depth_map_to_point_cloud(file):
     # Seems like rgb image has to be rgb
+    # ToDo; auto detect image extension? or must be jpg? png is black in grayscale display of o3d
     color_img_path = f"PointCloud/color/{file}.jpg"
     depth_img_path = f"PointCloud/depth/z_{file}.png"
-    # depth_img_path = "PointCloud/depth/z_dry.png"
 
     color_raw = o3d.io.read_image(color_img_path)
     depth_raw = o3d.io.read_image(depth_img_path)
     print(depth_raw)
+    print("Loaded color file: ", color_img_path)
+    print("Loaded depth file: ", depth_img_path)
 
     # loading the image
     img = PIL.Image.open(depth_img_path)
@@ -49,8 +76,9 @@ def depth_map_to_point_cloud(file):
 
     # self, color, depth, depth_scale=1000.0, depth_trunc=3.0, convert_rgb_to_intensity=True
     # rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(color_raw, depth_raw, 0.001, 300.)
-    # Image has to be spesific resolution (x,y)
-    rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(color_raw, depth_raw, 1.0, 65000)
+    # Image has to be spesific resolution (x,y)?
+    # color and depth image must match in resolution, clor has to be jpg
+    rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(color_raw, depth_raw, 300, 65000)
     print(rgbd_image)
 
     plt.subplot(1, 2, 1)
