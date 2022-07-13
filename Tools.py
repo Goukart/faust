@@ -109,6 +109,7 @@ def limits(data_type):
 
 
 # ToDo: which format works and does not lose resolution?
+# ToDo save image as 16 bit single channel gray scale
 def export_bytes_to_image(byte_array, name, path=""):
     # import png
     import imageio

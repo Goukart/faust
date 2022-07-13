@@ -9,7 +9,6 @@ import MiDaS
 import Tools
 
 
-# ToDo; Wip fix border or discard completely
 def __generate_scale_image(width, height, data_type, _range=None):
     if _range is None:
             _range = range(0, height, 1)
@@ -34,24 +33,10 @@ def __generate_scale_image(width, height, data_type, _range=None):
     return scale
 
 
-def convert_to_1_ch_grayscale(image_path):
-    # ToDo, make sure it is gray scale and 16 bit (and if it really has to be)
-    img = PIL.Image.open(image_path)
-
-    # img = img.convert('L', colors=2000)
-    print(img)
-    plt.imshow(img)  # cmap='gray'
-    plt.show()
-
-    new = 'PointCloud/depth/z-tmp.png'
-    img.save(new)  # is saved as int or float might cause problems
-
-    return new
-
-
 def depth_map_to_point_cloud(file):
     # Seems like rgb image has to be rgb
     # ToDo; auto detect image extension? or must be jpg? png is black in grayscale display of o3d
+    # ToDo: decide if either two folders and exact name or same folder but some prefix, change in MiDaS.py as well
     color_img_path = f"PointCloud/color/{file}.jpg"
     depth_img_path = f"PointCloud/depth/z_{file}.png"
 
@@ -78,7 +63,11 @@ def depth_map_to_point_cloud(file):
     # rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(color_raw, depth_raw, 0.001, 300.)
     # Image has to be spesific resolution (x,y)?
     # color and depth image must match in resolution, clor has to be jpg
-    rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(color_raw, depth_raw, 300, 65000)
+    #rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(color_raw, depth_raw, 1.0, 65000)
+    # A flat / all black depth map could be cause by depth_scale or depth_trunc being too low. Both seem to have no
+    # effect until 0.01, smaller is all black bigger make no difference
+    # create_from_color_and_depth(color, depth, depth_scale=1000.0, depth_trunc=3.0, convert_rgb_to_intensity=True)
+    rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(color_raw, depth_raw, 65000, 0.01)
     print(rgbd_image)
 
     plt.subplot(1, 2, 1)

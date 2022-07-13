@@ -23,15 +23,15 @@ fi
 # mm_out and those directories should be created by script
 
 # Inject the rendered images with real meta data
-echo "Do incection of meta data"
-conda activate faust
-python3 inject.py $imageRegex
-conda deactivate
-echo "Injection finished"
+## echo "Do incection of meta data"
+## conda activate faust
+## python3 inject.py $imageRegex
+## conda deactivate
+## echo "Injection finished"
 
 # Prepare directory for micmac and run micmac
 # rm -r $(find mm_out/ -mindepth 1 -maxdepth 1 ! -name "micmac.sh")
-mv injection_out/* mm_out/
+## mv injection_out/* mm_out/
 # Possibly change later?
 cd $path
 ./micmac.sh path=$path imageRegex=$imageRegex resolution=$resolution output=$output skipTo=$skipTo

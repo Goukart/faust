@@ -5,7 +5,6 @@ import MiDaS
 import Tools      # Custom helpful functions
 # from PointCloud.PointCloud import PointCloud
 import Test
-# import mic
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -121,14 +120,14 @@ def service_pc():
     #           Photogrammetry
     #
     ####################################################################
-    # mic.main()
+    # run micmac.sh
 
     ####################################################################
     #
     #           Generate Depth Map
     #
     ####################################################################
-    case = "arm"
+    case = "00000"
 
     # Test.dry(case)
     #depth_map = Test.__generate_scale_image(5184, 3456, np.float32)  # , _range=None)
@@ -136,6 +135,7 @@ def service_pc():
     #quick_dm(case)
     # Tools.export_bytes_to_image(depth_map, "z_chess", depth_images)
     # exit()
+    # ToDo save image as 16 bit single channel gray scale, is handled in Tools.py
 
     ####################################################################
     #
@@ -147,14 +147,6 @@ def service_pc():
     # color = imageio.imread(f"{color_images}{case}.jpg")
 
     Test.depth_map_to_point_cloud(case)
-
-    #plt.subplot(1, 2, 1)
-    #plt.title('color image')
-    #plt.imshow(color)
-    #plt.subplot(1, 2, 2)
-    #plt.title('depth image')
-    #plt.imshow(depth_map)
-    #plt.show()
 
 
 def main():

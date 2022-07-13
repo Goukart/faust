@@ -153,7 +153,6 @@ def generate_dms(_images_regex, _model, _out=None):
     images_as_paths = __load_files(_images_regex)
 
     output = f"{_out} -> {output_prefix}<original_file_name>" if _out is None else _out
-    # output = lambda o: f"{o} -> {output_prefix}<original_file_name>" if o is None else o
     print(f"\n___________________________________________________________________\n"
           f"All given parameters:\n"
           f"RegEx:\t{_images_regex}\n"
@@ -166,7 +165,6 @@ def generate_dms(_images_regex, _model, _out=None):
     depth_maps = {}
     for image in images_as_paths:
         depth_map = __generate_depth_map(image, model)
-        # ToDo convert image to 16 bit single channel gray scale
         if _out is None:
             name = f"{output_prefix}{os.path.split(image)[1].split('.')[0]}"
         else:
@@ -175,7 +173,6 @@ def generate_dms(_images_regex, _model, _out=None):
 
         print("image: ", image)
         print(f"generated image with name/key: [{name}]")
-        # Tools.export_bytes_to_image(depth_map, name)
         depth_maps[name] = depth_map
 
     return depth_maps
