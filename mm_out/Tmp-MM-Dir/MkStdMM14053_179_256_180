@@ -1,0 +1,8 @@
+./Tmp-MM-Dir/IMG_20220307_161938.jpg_Ch3.tif : 
+	 "/home/ben/git-pkg/micmac/bin/mm3d" PastDevlop  ./IMG_20220307_161938.jpg Coul8B=true
+./Tmp-MM-Dir/IMG_20220307_161942.jpg_Ch3.tif : 
+	 "/home/ben/git-pkg/micmac/bin/mm3d" PastDevlop  ./IMG_20220307_161942.jpg Coul8B=true
+./Tmp-MM-Dir/IMG_20220307_161951.jpg_Ch3.tif : 
+	 "/home/ben/git-pkg/micmac/bin/mm3d" PastDevlop  ./IMG_20220307_161951.jpg Coul8B=true
+all : ./Tmp-MM-Dir/IMG_20220307_161938.jpg_Ch3.tif ./Tmp-MM-Dir/IMG_20220307_161942.jpg_Ch3.tif ./Tmp-MM-Dir/IMG_20220307_161951.jpg_Ch3.tif 
+	 

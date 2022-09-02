@@ -1,0 +1,24 @@
+=================================================================
+"/home/ben/git-pkg/micmac/bin/mm3d" "MMCalcSzWCor" "./Pyram/IMG_20220307_161951.jpgDeZoom16.tif" "Out=./Pyram/ImSzW_Dz16IMG_20220307_161951.jpg.tif" 
+ PID : 14176 ;   [Beginning at ] Mon Aug 29 17:33:01 2022
+=================================================================
+"/home/ben/git-pkg/micmac/bin/mm3d" "MMCalcSzWCor" "./Pyram/IMG_20220307_161938.jpgDeZoom16.tif" "Out=./Pyram/ImSzW_Dz16IMG_20220307_161938.jpg.tif" 
+ PID : 14178 ;   [Beginning at ] Mon Aug 29 17:33:01 2022
+=================================================================
+"/home/ben/git-pkg/micmac/bin/mm3d" "MMCalcSzWCor" "./Pyram/IMG_20220307_161942.jpgDeZoom16.tif" "Out=./Pyram/ImSzW_Dz16IMG_20220307_161942.jpg.tif" 
+ PID : 14181 ;   [Beginning at ] Mon Aug 29 17:33:01 2022
+ PID : 14176 ;   [Ending correctly at] Mon Aug 29 17:33:01 2022
+ PID : 14178 ;   [Ending correctly at] Mon Aug 29 17:33:01 2022
+ PID : 14181 ;   [Ending correctly at] Mon Aug 29 17:33:01 2022
+=================================================================
+"/home/ben/git-pkg/micmac/bin/mm3d" "MMCalcSzWCor" "./Pyram/IMG_20220307_161938.jpgDeZoom8.tif" "Out=./Pyram/ImSzW_Dz8IMG_20220307_161938.jpg.tif" 
+ PID : 14249 ;   [Beginning at ] Mon Aug 29 17:33:01 2022
+=================================================================
+"/home/ben/git-pkg/micmac/bin/mm3d" "MMCalcSzWCor" "./Pyram/IMG_20220307_161951.jpgDeZoom8.tif" "Out=./Pyram/ImSzW_Dz8IMG_20220307_161951.jpg.tif" 
+ PID : 14252 ;   [Beginning at ] Mon Aug 29 17:33:01 2022
+ PID : 14249 ;   [Ending correctly at] Mon Aug 29 17:33:02 2022
+ PID : 14252 ;   [Ending correctly at] Mon Aug 29 17:33:02 2022
+=================================================================
+"/home/ben/git-pkg/micmac/bin/mm3d" "MMCalcSzWCor" "./Pyram/IMG_20220307_161942.jpgDeZoom8.tif" "Out=./Pyram/ImSzW_Dz8IMG_20220307_161942.jpg.tif" 
+ PID : 14274 ;   [Beginning at ] Mon Aug 29 17:33:02 2022
+ PID : 14274 ;   [Ending correctly at] Mon Aug 29 17:33:02 2022

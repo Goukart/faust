@@ -10,7 +10,7 @@ for P; do
   eval $P
 done
 
-# This shoul dmanage all and orchestrate it
+# This should manage all and orchestrate it
 # when one script aborts no other should be executed
 # same in micmac, if one step fails dont run following ones
 

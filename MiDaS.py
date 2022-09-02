@@ -3,6 +3,9 @@ import getopt  # Handle named cli parameter
 import os  # Handle platform independent paths
 import time  # Measure execution time
 import re  # Utilize RegEx
+
+import numpy as np
+
 import Tools  # Custom helpful functions
 
 # MiDaS dependencies
@@ -10,9 +13,9 @@ import cv2
 import torch
 
 
-# ToDo: build in fail-safes in every functions, check parameter for correctness, so functions can be used freely
+# ToDo build in fail-safes in every functions, check parameter for correctness, so functions can be used freely
 
-# ToDo: Final cleanup
+# ToDo Final cleanup
 #############################################################################
 #
 #           This Module sole purpose is to generate a depth map
@@ -24,6 +27,7 @@ import torch
 
 # Load all files as paths into an array
 # ToDo wip
+# ToDo move to Tools module, fuse with inject version
 def __load_files(expression):
     # ToDo test if works on Windows, using '\' as path seperator
     parts = os.path.split(expression)
@@ -58,7 +62,7 @@ def __load_files(expression):
     else:
         print("Aborting.")
         exit()
-
+    print("__load_files in MiDaS is: ", type(images))
     return images
 
 
@@ -138,7 +142,7 @@ def __generate_depth_map(original_image, _model):
     return output
 
 
-def generate_dms(_images_regex, _model, _out=None):
+def generate_dms(_images_regex, _model, _out=None) -> dict[np.ndarray]:
     """
     :param _images_regex: Regular expression to "select" images
     :param _model: Which model MiDaS uses

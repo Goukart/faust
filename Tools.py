@@ -1,5 +1,8 @@
 import numpy as np
 import time       # Measure execution time
+import re
+import sys
+import os
 
 
 def columnify(iterable):
@@ -110,7 +113,7 @@ def limits(data_type):
 
 # ToDo: which format works and does not lose resolution?
 # ToDo save image as 16 bit single channel gray scale
-def export_bytes_to_image(byte_array, name, path=""):
+def export_bytes_to_image(byte_array: np.ndarray, name: str, path: str = ""):
     # import png
     import imageio
     # from PIL import Image
@@ -135,3 +138,37 @@ def export_bytes_to_image(byte_array, name, path=""):
 
     print(f"saved as: [{new_file}] under {path}")
     # print(f"Depth map saved under ./{subject}_z.png")
+
+
+def load_files(_expression: str) -> list:
+    parts = os.path.split(_expression)
+    path = "/".join(parts[:-1])  # ToDo not platform independent
+    _expression = parts[-1]
+    print("parts: ", parts)
+    print("path: ", path)
+    print("actual regex: ", parts[-1])
+    print("All files on dir:")
+    print(os.listdir(path))
+    # ToDo cheok if it works with just a expression too
+
+    regex = None
+    try:
+        regex = re.compile(_expression)
+    except re.error:
+        print("Expression not valid")
+        sys.exit()
+    print(f"Loading all files matching expression [{regex.pattern}]\n")
+
+    selection = []
+    for entry in os.listdir(path):
+        if regex.match(entry):
+            selection.append(entry)
+
+    print(f"Loading Files [{len(selection)}]: ")
+    print(f"{selection}\n")
+    # colprint(filtered)
+    if input("Confirm ? [y/N] ") not in ("y", "Y"):
+        print("Aborting")
+        sys.exit()
+
+    return selection

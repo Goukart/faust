@@ -1,0 +1,24 @@
+=================================================================
+"mm3d" "Tapioca" "All" ".*.jpg" "1000" 
+ PID : 13934 ;   [Beginning at ] Mon Aug 29 17:32:55 2022
+ PID : 13934 ;   [Ending correctly at] Mon Aug 29 17:32:57 2022
+=================================================================
+"mm3d" "Tapas" "FraserBasic" ".*.jpg" "Out=hand" 
+ PID : 14036 ;   [Beginning at ] Mon Aug 29 17:32:57 2022
+ PID : 14036 ;   [Ending correctly at] Mon Aug 29 17:32:58 2022
+=================================================================
+"/home/ben/git-pkg/micmac/bin/mm3d" "MMByP" "BigMac" ".*.jpg" "hand" "UseGpu=0" "ExpImSec=1" "SH=" "Do=AMP" "Zoom0=8" "ZoomF=8" "ExpTxt=0" 
+ PID : 14045 ;   [Beginning at ] Mon Aug 29 17:32:59 2022
+=================================================================
+"/home/ben/git-pkg/micmac/bin/mm3d" "AperoChImSecMM" ".*.jpg" "hand" "ExpTxt=0" "ExpImSec=1" "SH=" "TetaOpt=0.170000" 
+ PID : 14052 ;   [Beginning at ] Mon Aug 29 17:32:59 2022
+ PID : 14052 ;   [Ending correctly at] Mon Aug 29 17:32:59 2022
+=================================================================
+"/home/ben/git-pkg/micmac/bin/mm3d" "MMPyram" ".*.jpg" "hand" 
+ PID : 14106 ;   [Beginning at ] Mon Aug 29 17:32:59 2022
+ PID : 14106 ;   [Ending correctly at] Mon Aug 29 17:33:00 2022
+ PID : 14045 ;   [Ending correctly at] Mon Aug 29 17:33:00 2022
+=================================================================
+"/home/ben/git-pkg/micmac/bin/mm3d" "MMPyram" "./%NKS-Set-OfFile@MMByPairFiles.xml" "hand" "ImSec=hand" 
+ PID : 14150 ;   [Beginning at ] Mon Aug 29 17:33:00 2022
+ PID : 14150 ;   [Ending correctly at] Mon Aug 29 17:33:00 2022
