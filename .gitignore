@@ -13,3 +13,5 @@ images
 venv
 pyntcloud_plot_assets
 tmp/*
+mm_out/*
+!mm_out/micmac.sh
