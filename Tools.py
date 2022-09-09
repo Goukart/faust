@@ -4,6 +4,8 @@ import re
 import sys
 import os
 
+import Tools
+
 
 def columnify(iterable):
     # First convert everything to its str
@@ -14,15 +16,17 @@ def columnify(iterable):
     return padded
 
 
-def colprint(iterable, width=120):
+def col_format(iterable, width=120):
     columns = columnify(iterable)
     colwidth = len(columns[0]) + 2
-    perline = (width - 4) // colwidth
+    per_line = (width - 4) // colwidth
+    text = ""
     for i, column in enumerate(columns):
-        print(column, end='\t')
-        if i % perline == perline - 1:
-            print('\n', end='')
-    print("\n")
+        text += column + '\t'
+        if i % per_line == per_line - 1:
+            text += '\n'
+    text += '\n'
+    return text
 
 
 def error_print(function_name, error_message):
@@ -140,35 +144,64 @@ def export_bytes_to_image(byte_array: np.ndarray, name: str, path: str = ""):
     # print(f"Depth map saved under ./{subject}_z.png")
 
 
-def load_files(_expression: str) -> list:
-    parts = os.path.split(_expression)
-    path = "/".join(parts[:-1])  # ToDo not platform independent
-    _expression = parts[-1]
-    print("parts: ", parts)
-    print("path: ", path)
-    print("actual regex: ", parts[-1])
-    print("All files on dir:")
-    print(os.listdir(path))
-    # ToDo cheok if it works with just a expression too
+def load_files_real(_pattern: str, _dir: str = None) -> list:
+    """Load all files as Paths into array
+
+    :param _pattern: [str]: All file that match this regular expression get selected.
+    :param _dir: [str, optional]: Path in which all files will be searched. If this is not given, the '_pattern' argument wil be split into path and regex.
+    :return: [list]: A list of all files with their path.
+    """
+    expression = None
+    path = None
+    # Handle path combined with expression and both given separately
+    if _dir is None:
+        # ToDo test if works on Windows, using '\' as path seperator
+        parts = _pattern.split(os.path.sep)
+        expression = parts[-1]
+        path = os.path.sep.join(parts[:-1]) + os.path.sep
+    else:
+        expression = _pattern
+        path = _dir
+
+    # print("_pattern: \t", _pattern)
+    # print("_dir: \t\t", _dir)
+    # print("expression: ", expression)
+    # print("path: \t\t", path)
+    # print("os.path.sep ", os.path.sep)
+    # print("\n")
 
     regex = None
     try:
-        regex = re.compile(_expression)
+        regex = re.compile(expression)
     except re.error:
         print("Expression not valid")
-        sys.exit()
+        sys.exit(-1)
     print(f"Loading all files matching expression [{regex.pattern}]\n")
 
-    selection = []
+    # ToDo: use this where optimization can be done using filter and apply a funktion on every match?
+    # if so using maps and filter together maybe what i looked for
+    matches = []
     for entry in os.listdir(path):
         if regex.match(entry):
-            selection.append(entry)
+            # ToDo: make it list all files or all paths to file, selectable
+            matches.append(path + entry)
+            # matches.append(entry)
 
-    print(f"Loading Files [{len(selection)}]: ")
-    print(f"{selection}\n")
-    # colprint(filtered)
-    if input("Confirm ? [y/N] ") not in ("y", "Y"):
+    if len(matches) < 1:
+        print(f"Could not match [{regex.pattern}] on files in [{path}]. No matches:")
+        print(Tools.col_format(matches))
+        sys.exit(-1)
+
+    print(f"Loading Files [{len(matches)}]: ")
+
+    return matches
+
+
+def cli_confirm_files(_list: list):
+    print(f"Loading Files [{len(_list)}]: \n")
+    print(Tools.col_format(_list))
+    if input("Confirm ? [y/N] ").lower() not in ("y", "yes"):
         print("Aborting")
-        sys.exit()
+        sys.exit(-1)
 
-    return selection
+    print("Confirmed.")

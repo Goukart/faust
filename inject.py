@@ -9,6 +9,10 @@ import re
 import sys
 import Tools
 
+# Exif stuff
+import piexif
+from PIL import Image
+
 input_dir = "./tmp/render_out/"
 output_dir = "./injection_out/"
 
@@ -26,6 +30,9 @@ def inject_exif(source: str, regex: str) -> int:
     from PIL import Image
     # files = load_files(regex)
     files = Tools.load_files(regex)
+
+    Tools.cli_confirm_files(files)
+
     for file in files:
         # edit_piexif(file)
         out = Image.open(input_dir + file)
@@ -35,49 +42,34 @@ def inject_exif(source: str, regex: str) -> int:
     return 0
 
 
-# ToDo move to Tools module, fuse with MiDaS version
-def load_files(_pattern: str) -> list:
-    regex = None
-    try:
-        regex = re.compile(_pattern)
-    except re.error:
-        print("Expression not valid")
-        sys.exit()
-    print(f"Loading all files matching expression [{regex.pattern}]\n")
-
-    filtered = []
-    for entry in os.listdir(input_dir):
-        if regex.match(entry):
-            filtered.append(entry)
-
-    print(f"Loading Files [{len(filtered)}]: ")
-    # print(f"{filtered}\n")
-    Tools.colprint(filtered)
-    if input("Confirm ? [y/N] ") not in ("y", "Y"):
-        print("Aborting")
-        sys.exit()
-
-    return filtered
-
-
-def extract_exif(donor):
-    import piexif
-    from PIL import Image
-
-    # Load source exif
+def extract_exif(donor: str) -> bytes:
+    # Extract source exif data
     source = Image.open(donor)
     exif_dict = piexif.load(source.info['exif'])
 
-    # Edit data
-    #for attribute in exifs:
-        #exif_dict['Exif'][attribute] = exifs[attribute]
-    print(exif_dict['Exif'][piexif.ExifIFD.FocalLength])
-    # sys.exit()
-
-    # Inject into target file
+    # Dump exif data as bytes
     exif_bytes = piexif.dump(exif_dict)
-    # out = Image.open("out.jpg")
-    # # out.save('_%s' % file, "png", exif=exif_bytes)
-    # out.save("out.jpg", "jpeg", exif=exif_bytes)
 
     return exif_bytes
+
+
+# def edit():
+    # source = Image.open(path)
+    # exif_dict = piexif.load(source.info['exif'])
+
+    # Edit data
+    # for attribute in exifs:
+    # exif_dict['Exif'][piexif.ExifIFD.FocalLength]
+    # exif_dict['Exif'][attribute] = exifs[attribute]
+
+
+# For CLI
+def main():
+    # laodfiles:
+    # print(f"{filtered}\n")
+    # Tools.colprint(filtered)
+    #if input("Confirm ? [y/N] ") not in ("y", "Y"):
+    #    print("Aborting")
+    #    sys.exit()
+
+    return 0

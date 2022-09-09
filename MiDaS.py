@@ -25,33 +25,9 @@ import torch
 #############################################################################
 
 
-# Load all files as paths into an array
-# ToDo wip
-# ToDo move to Tools module, fuse with inject version
-def __load_files(expression):
-    # ToDo test if works on Windows, using '\' as path seperator
-    parts = os.path.split(expression)
-    regex = ""
-    try:
-        regex = re.compile(parts[1])
-    except re.error:
-        print("Non valid regex pattern")
-        exit(-1)
+def __load_files0(expression):
+    images = Tools.load_files_real()
 
-    path = parts[0]
-    files = os.listdir(path)
-
-    # ToDo: use this where optimization can be done using filter and apply a funktion on every match?
-    # if so using maps and filter together maybe what i looked for
-    images = []
-    for file in files:
-        if regex.match(file):
-            images.append(os.path.join(path, file))
-
-    if len(images) < 1:
-        print(f"Could not match [{regex.pattern}] on files in [{path}]:")
-        Tools.colprint(files)
-        exit(-1)
 
     print("Loading files:\n")
     Tools.colprint(images)
@@ -154,7 +130,7 @@ def generate_dms(_images_regex, _model, _out=None) -> dict[np.ndarray]:
     # Load and process images
     model = __select_model(_model)
     # Load files that match expression into array
-    images_as_paths = __load_files(_images_regex)
+    images_as_paths = Tools.load_files(_images_regex)
 
     output = f"{_out} -> {output_prefix}<original_file_name>" if _out is None else _out
     print(f"\n___________________________________________________________________\n"

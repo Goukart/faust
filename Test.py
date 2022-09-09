@@ -33,7 +33,7 @@ def __generate_scale_image(width, height, data_type, _range=None):
     return scale
 
 
-def rgbd_to_pc(file: str) -> o3d.cuda.pybind.geometry.PointCloud:
+def rgbd_to_pc(file: str) -> o3d.geometry.PointCloud:
     # read image pair
     # Seems like rgb image has to be rgb, or have at least 3 channels?
     # ToDo; auto detect image extension? or must be jpg? png is black in grayscale display of o3d
