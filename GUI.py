@@ -23,9 +23,13 @@ from enum import Enum
 
 
 class Style(Enum):
-    path = "QTextEdit {color: rgb(255, 170, 255)}"
-    # regex = "QLineEdit {color: rgb(14, 122, 14)}"
-    regex = "QLineEdit {color: rgb(44, 152, 44)}"
+    #path = "QTextEdit {color: rgb(255, 170, 255)}"
+    path = "QTextEdit {color: #FEF5AC}"
+    regex = "QLineEdit {color: #90B77D}"
+    photogrammetry = "style=\"color:#A8A4CE;\""
+    dm_generation = "style=\"color:#A8A4CE;\""
+    correction = "style=\"color:#A8A4CE;\""
+    meta_injection = "style=\"color:Tomato;\""
 
 
 class Gui(object):
@@ -125,7 +129,10 @@ class Gui(object):
         print("generating dms")
 
     def photogrammetry(self):
-        print("generating dms")
+        print("3d reconstruction frm images")
+
+    def correct(self):
+        print("Do my shit")
 
     def build(self):
         app = QApplication([])
@@ -134,34 +141,40 @@ class Gui(object):
         window.setWindowTitle("Faust")
         window.setGeometry(100, 100, 960, 540)
         layout = QVBoxLayout()
+        spacing = 20
 
         # Script info / data
         script_info = QGridLayout()
         script_info.addWidget(QLabel("Current path: "), 0, 0)
         script_info.addWidget(self.__path_txt(os.getcwd()), 0, 1)
         layout.addLayout(script_info)
-        layout.addSpacing(35)
+        layout.addSpacing(spacing)
 
         # Photogrammetry
-        title = "<h2 style=\"color:Tomato;\">3D reconstruction</h2>"
+        title = f"<h2 {Style.photogrammetry.value}>3D reconstruction</h2>"
         path = self.photogrammetry_dir
-        action = ("run script", self.generate_dm)
+        action = ("Run script", self.photogrammetry)
         layout.addLayout(self.__build_modul(title, action, path))
-        layout.addSpacing(50)
+        layout.addSpacing(spacing)
 
         # Generate Depth Map
-        title = "<h2>Generate depth maps</h2>"
+        title = f"<h2 {Style.dm_generation.value}>Generate depth maps</h2>"
         path = self.depth_maps_dir
         action = ("Generate", self.generate_dm)
         layout.addLayout(self.__build_modul(title, action, path))
-        layout.addSpacing(50)
+        layout.addSpacing(spacing)
 
-        # Create Point Cloud
+        # Correct model with depth maps
+        title = f"<h2 {Style.correction.value}>Correct model with depth maps</h2>"
+        path = self.depth_maps_dir
+        action = ("Correct", self.correct)
+        layout.addLayout(self.__build_modul(title, action, path))
+        layout.addSpacing(spacing)
 
         # Inject Metadata - will be incorporated somewhere
-        title = "<h2>Inject exif data into images</h2>"
+        title = f"<h2 {Style.meta_injection.value}>Inject exif data into images</h2>"
         path = self.injection_input_dir
-        action = ("Inject", self.inject_meta)  # ("Inject", partial(self.inject_meta))
+        action = ("Inject", self.inject_meta)
         layout.addLayout(self.__build_modul(title, action, path))
 
         # Finalise
