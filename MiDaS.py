@@ -25,23 +25,6 @@ import torch
 #############################################################################
 
 
-def __load_files0(expression):
-    images = Tools.load_files_real()
-
-
-    print("Loading files:\n")
-    Tools.colprint(images)
-    print("Confirm selection ? [y/N] ")
-
-    if input().lower() in ("y", "yes"):
-        print("Confirmed.")
-    else:
-        print("Aborting.")
-        exit()
-    print("__load_files in MiDaS is: ", type(images))
-    return images
-
-
 # Select model, default is small
 def __select_model(_input):
     #######################################################################
@@ -129,8 +112,11 @@ def generate_dms(_images_regex, _model, _out=None) -> dict[np.ndarray]:
 
     # Load and process images
     model = __select_model(_model)
+
     # Load files that match expression into array
     images_as_paths = Tools.load_files(_images_regex)
+    Tools.cli_confirm_files(images_as_paths)
+    print("generate_dms in MiDaS is: ", type(images_as_paths))
 
     output = f"{_out} -> {output_prefix}<original_file_name>" if _out is None else _out
     print(f"\n___________________________________________________________________\n"

@@ -3,48 +3,30 @@
 # requires
 # pip install exif
 
-import os
-# import io
-import re
-import sys
 import Tools
 
 # Exif stuff
 import piexif
 from PIL import Image
 
-input_dir = "./tmp/render_out/"
-output_dir = "./injection_out/"
 
 # ToDo test other libs how they can handle exif data (PIL, exif, piexif)
 # ToDo clear output folder
 
 
-def inject_exif(source: str, regex: str) -> int:
-    source = "injectionStuff/raw.jpg"
-
-    # extract real exif data
-    exif_bytes = extract_exif(source)
-
-    # inject exif data into render images
-    from PIL import Image
-    # files = load_files(regex)
-    files = Tools.load_files(regex)
-
-    Tools.cli_confirm_files(files)
-
+# ToDo only uses one source not a list, yet
+def inject_exif(exif_bytes: bytes, files: list) -> int:
     for file in files:
         # edit_piexif(file)
-        out = Image.open(input_dir + file)
+        out = Image.open(file)
         # out.save('_%s' % file, "jpeg", exif=exif_bytes)
-        out.save(output_dir + file, "jpeg", exif=exif_bytes)
-
+        out.save(file, "jpeg", exif=exif_bytes)
     return 0
 
 
-def extract_exif(donor: str) -> bytes:
+def extract_exif(source: str) -> bytes:
     # Extract source exif data
-    source = Image.open(donor)
+    source = Image.open(source)
     exif_dict = piexif.load(source.info['exif'])
 
     # Dump exif data as bytes
@@ -64,6 +46,7 @@ def extract_exif(donor: str) -> bytes:
 
 
 # For CLI
+# call: python inject.py ".*.jpg"
 def main():
     # laodfiles:
     # print(f"{filtered}\n")
@@ -71,5 +54,15 @@ def main():
     #if input("Confirm ? [y/N] ") not in ("y", "Y"):
     #    print("Aborting")
     #    sys.exit()
+
+    source = ""  # ToDo get from argument
+    regex = ""  # ToDo get from argument
+    # extract real exif data
+    exif_bytes = extract_exif(source)
+
+    # inject exif data into render images
+    files = Tools.load_files(regex)
+
+    Tools.cli_confirm_files(files)
 
     return 0

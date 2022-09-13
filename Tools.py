@@ -17,6 +17,9 @@ def columnify(iterable):
 
 
 def col_format(iterable, width=120):
+    if len(iterable) < 1:
+        return ""
+
     columns = columnify(iterable)
     colwidth = len(columns[0]) + 2
     per_line = (width - 4) // colwidth
@@ -144,7 +147,7 @@ def export_bytes_to_image(byte_array: np.ndarray, name: str, path: str = ""):
     # print(f"Depth map saved under ./{subject}_z.png")
 
 
-def load_files_real(_pattern: str, _dir: str = None) -> list:
+def load_files(_pattern: str, _dir: str = None) -> list:
     """Load all files as Paths into array
 
     :param _pattern: [str]: All file that match this regular expression get selected.
@@ -163,19 +166,21 @@ def load_files_real(_pattern: str, _dir: str = None) -> list:
         expression = _pattern
         path = _dir
 
-    # print("_pattern: \t", _pattern)
-    # print("_dir: \t\t", _dir)
-    # print("expression: ", expression)
-    # print("path: \t\t", path)
-    # print("os.path.sep ", os.path.sep)
-    # print("\n")
+    if not os.path.exists(path):
+        print(f"No such file or directory: '{path}'")
+        return []
 
     regex = None
+    # Check regular rexpression to be correct
     try:
         regex = re.compile(expression)
     except re.error:
         print("Expression not valid")
-        sys.exit(-1)
+        # sys.exit(-1)
+        return []
+    if not regex.pattern:
+        print("Expression empty")
+        return []
     print(f"Loading all files matching expression [{regex.pattern}]\n")
 
     # ToDo: use this where optimization can be done using filter and apply a funktion on every match?
@@ -184,15 +189,14 @@ def load_files_real(_pattern: str, _dir: str = None) -> list:
     for entry in os.listdir(path):
         if regex.match(entry):
             # ToDo: make it list all files or all paths to file, selectable
+            # Image.open(path + file) must be done with the result
             matches.append(path + entry)
             # matches.append(entry)
 
     if len(matches) < 1:
         print(f"Could not match [{regex.pattern}] on files in [{path}]. No matches:")
-        print(Tools.col_format(matches))
-        sys.exit(-1)
-
-    print(f"Loading Files [{len(matches)}]: ")
+        # sys.exit(-1)
+        return []
 
     return matches
 

@@ -13,36 +13,13 @@ import subprocess
 import sys
 
 
-from PyQt6.QtWidgets import (
-    QApplication,
-    QGridLayout,
-    QVBoxLayout,
-    QPushButton,
-    QWidget,
-    QLabel,
-    QLineEdit,
-    QTextEdit,
-)
-from PyQt6.QtGui import (
-    QColor,
-)
-from functools import partial
-
-
-####################################################################
-#
-#           Configuration ToDo: changeable in gui (oprional)
-#
-####################################################################
-
-
-
 # Orchestrate all the Modules
 # ToDo: pipe.sh should convert all input images to png
 
 # ToDo wip
 # Convert and scale to a (16 bit) unsigned integer and normalize it
 import inject
+from GUI import Gui
 
 
 def __convert(byte_array, _type=np.uint16, _from=None, _to=None):
@@ -171,8 +148,8 @@ def ray(vector: list) -> o3d.geometry.Geometry:
     return mesh_box
 
 
-# recieve a number of points, arange them in a grid, applky a scale and done:
-# get np.random.rand(10000, 3), arrange in a grid and scale z so its not 0-1
+# receive a number of points, arrange them in a grid, apply a scale and done:
+# get np.random.rand(10000, 3), arrange in a grid and scale z, so it's not 0-1
 def grid():
     return 0
 
@@ -346,85 +323,15 @@ def service_pc():
     Test.depth_map_to_point_cloud("l1")
 
 
-def select(regex: str, out: QTextEdit) -> list:
-    selection = inject.load_files(regex)
-    # ToDo format with given width, note width is number of characters not pixels
-    width = 120
-    out.setText(Tools.col_format(selection, width))
-    return selection
-
-
 def tests():
-    Tools.load_files_real("./tmp/render_out/.*")
-    Tools.load_files_real(".*", "./tmp/render_out/")
+    Tools.load_files("./tmp/render_out/.*")
+    Tools.load_files(".*", "./tmp/render_out/")
     sys.exit()
 
 
-def gui():
-    app = QApplication([])
-
-    window = QWidget()
-    window.setWindowTitle("Faust")
-    window.setGeometry(100, 100, 960, 540)
-    # helloMsg = QLabel("<h1>Hello, World!</h1>", parent=window)
-    # helloMsg.move(60, 15)
-
-    layout = QVBoxLayout()
-
-    # Photogrammetry
-
-    # Generate Depth Map
-
-    # Create Point Cloud
-
-    # Inject Metadata - will be incorporated somewhere
-    working_dir = "./tmp/render_out/"
-    l_injection = QGridLayout()
-    #l_injection.addWidget(QLabel("), 0, 0, 1, 2)
-    lbl_title = QLabel(f"Path where it gets the images from: \t")
-    # lbl_title.setMaximumHeight(15)
-    l_injection.addWidget(lbl_title, 0, 0)
-    txt_path = QTextEdit(working_dir)
-    txt_path.setReadOnly(True)
-    txt_path.setMaximumHeight(27)
-    txt_path.setTextColor(QColor(123, 255, 200))
-    l_injection.addWidget(txt_path, 0, 1)
-    # l_injection.addWidget(QPushButton("[]"), 0, 1)
-    l_injection.addWidget(QLabel("Regex: \t"), 1, 0)
-    tbx_regex = QLineEdit("render.*")
-    l_injection.addWidget(tbx_regex, 1, 1)
-    txt_output = QTextEdit()
-    txt_output.setMinimumHeight(90)
-    txt_output.setDisabled(True)
-    l_injection.addWidget(txt_output, 2, 0, 1, 2)
-
-    regex = tbx_regex.text()
-    print(f"regex: [{regex}]")
-
-    btn_select = QPushButton("Tests") # Select
-    # btn_select.clicked.connect(partial(select, regex, txt_output))
-    btn_select.clicked.connect(tests)
-    btn_inject = QPushButton("Inject")
-    btn_inject.clicked.connect(partial(inject.inject_exif, "", working_dir))
-    l_injection.addWidget(btn_select, 3, 0)
-    l_injection.addWidget(btn_inject, 3, 1)
-    # l_injection.addWidget(QPushButton("Button (2, 0) - (2, 1)"), 2, 0, 1, 2)
-
-
-    print(tbx_regex.height())
-    # print("injecting meta data")
-
-    # inject.inject_exif("", f"./tmp/render_out/{regex}")
-
-    layout.addLayout(l_injection)
-
-    window.setLayout(layout)
-    window.show()
-    sys.exit(app.exec())
-
-
 def main():
-    gui()
+    gui = Gui()
+    gui.build()
     # service_pc()
 
 
