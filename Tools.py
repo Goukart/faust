@@ -4,32 +4,66 @@ import re
 import sys
 import os
 
-import Tools
 
+def columnify(data, width=120):
+    """
+        Prints sorted item of the list data structure formated using
+        the rows and columns parameters
+    """
+    if not data:
+        return
 
-def columnify(iterable):
-    # First convert everything to its str
-    strings = [str(x) for x in iterable]  # repr seems to be for debugging
-    # Now pad all the strings to match the widest
-    widest = max(len(x) for x in strings)
-    padded = [x.ljust(widest) for x in strings]
-    return padded
+    rows = 0
+    columns = int(width / (max(len(x) for x in data) + 4))
+    ljust = 10
+    string = ""
 
+    print("rows: ", rows)
+    print("longest entry: ", max(len(x) for x in data))
+    print("width: ", width)
+    print("how many fit: ", width / (max(len(x) for x in data) + 4))
 
-def col_format(iterable, width=120):
-    if len(iterable) < 1:
-        return ""
+    if rows:
+        # column-wise sorting
+        # we must know the number of rows to print on each column
+        # before we print the next column. But since we cannot
+        # move the cursor backwards (unless using ncurses library)
+        # we have to know what each row with look like upfront
+        # so we are basically printing the rows line by line instead
+        # of printing column by column
+        lines = {}
+        for count, item in enumerate(sorted(data)):
+            lines.setdefault(count % rows, []).append(item)
+        for key, value in sorted(lines.items()):
+            for item in value:
+                string += item.ljust(ljust) + "␣\t"
+                print(item.ljust(ljust))
+            print()
+            string += "\n"
+    elif columns:
+        # row-wise sorting
+        # we just need to know how many columns should a row have
+        # before we print the next row on the next line.
+        for count, item in enumerate(sorted(data), 1):
+            string += item.ljust(ljust) + "    "
+            if count % columns == 0:
+                string += "\n"
+    else:
+        print(sorted(data))  # the default print behaviour
+    return string
+    #if len(iterable) < 1:
+    #    return ""
 
-    columns = columnify(iterable)
-    colwidth = len(columns[0]) + 2
-    per_line = (width - 4) // colwidth
-    text = ""
-    for i, column in enumerate(columns):
-        text += column + '\t'
-        if i % per_line == per_line - 1:
-            text += '\n'
-    text += '\n'
-    return text
+    #columns = iterable
+    #colwidth = len(columns[0]) + 2
+    #per_line = (width - 4) // colwidth
+    #text = ""
+    #for i, column in enumerate(columns):
+    #    text += column + '\t'
+    #    if i % per_line == per_line - 1:
+    #        text += '\n'
+    #text += '\n'
+    #return text
 
 
 def error_print(function_name, error_message):
@@ -203,7 +237,7 @@ def load_files(_pattern: str, _dir: str = None) -> list:
 
 def cli_confirm_files(_list: list):
     print(f"Loading Files [{len(_list)}]: \n")
-    print(Tools.col_format(_list))
+    print(columnify(_list))
     if input("Confirm ? [y/N] ").lower() not in ("y", "yes"):
         print("Aborting")
         sys.exit(-1)

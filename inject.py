@@ -16,6 +16,8 @@ from PIL import Image
 
 # ToDo only uses one source not a list, yet
 def inject_exif(exif_bytes: bytes, files: list) -> int:
+    if not exif_bytes or not files:
+        return -1
     for file in files:
         # edit_piexif(file)
         out = Image.open(file)
