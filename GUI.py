@@ -100,7 +100,13 @@ class GuiModul(QGridLayout):
             # one Character is 9px
             #print("width in mm: ", self.__txt_output.widthMM())
             #print("width in characters: ", int(self.__txt_output.width() / 9))
-            width = int(self.__txt_output.width() / self.__txt_output.currentFont().pixelSize())
+
+            # ToDo: fix rough estimation, because the size is the height not width, which I actually need
+            font_width = (self.__txt_output.currentFont().pixelSize() + 2.4) / 2
+            width = int(self.__txt_output.width() / font_width)
+            print("txt width: ", self.__txt_output.width())
+            print("px size:", self.__txt_output.currentFont().pixelSize())
+            print("space", self.__txt_output.currentFont().letterSpacing())
             # self.__txt_output.setText("mmmmmmmmmmmmmmmmmmmmmmmmmmmmmMMmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm")
             self.__txt_output.setText(Tools.columnify(self.__selection, width))
 

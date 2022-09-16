@@ -5,65 +5,31 @@ import sys
 import os
 
 
-def columnify(data, width=120):
+def columnify(data: list, width: int = 120) -> str:
     """
-        Prints sorted item of the list data structure formated using
-        the rows and columns parameters
+        Arranges a list in a column format fitting as many columns as possible
+        in given width (in number of characters).
     """
     if not data:
-        return
+        return ""
 
-    rows = 0
-    columns = int(width / (max(len(x) for x in data) + 4))
-    ljust = 10
+    longest_item = max(len(x) for x in data)
+    padding = 4
+    ljust = longest_item + padding
+    columns = int(width / ljust)
     string = ""
 
-    print("rows: ", rows)
-    print("longest entry: ", max(len(x) for x in data))
+    print("longest entry: ", longest_item)
     print("width: ", width)
-    print("how many fit: ", width / (max(len(x) for x in data) + 4))
+    print("how many fit: ", width / ljust)
 
-    if rows:
-        # column-wise sorting
-        # we must know the number of rows to print on each column
-        # before we print the next column. But since we cannot
-        # move the cursor backwards (unless using ncurses library)
-        # we have to know what each row with look like upfront
-        # so we are basically printing the rows line by line instead
-        # of printing column by column
-        lines = {}
-        for count, item in enumerate(sorted(data)):
-            lines.setdefault(count % rows, []).append(item)
-        for key, value in sorted(lines.items()):
-            for item in value:
-                string += item.ljust(ljust) + "␣\t"
-                print(item.ljust(ljust))
-            print()
+    for count, item in enumerate(sorted(data), 1):
+        string += item.ljust(ljust)
+        # string += item.ljust(ljust, "␣")
+        if count % columns == 0:
             string += "\n"
-    elif columns:
-        # row-wise sorting
-        # we just need to know how many columns should a row have
-        # before we print the next row on the next line.
-        for count, item in enumerate(sorted(data), 1):
-            string += item.ljust(ljust) + "    "
-            if count % columns == 0:
-                string += "\n"
-    else:
-        print(sorted(data))  # the default print behaviour
-    return string
-    #if len(iterable) < 1:
-    #    return ""
 
-    #columns = iterable
-    #colwidth = len(columns[0]) + 2
-    #per_line = (width - 4) // colwidth
-    #text = ""
-    #for i, column in enumerate(columns):
-    #    text += column + '\t'
-    #    if i % per_line == per_line - 1:
-    #        text += '\n'
-    #text += '\n'
-    #return text
+    return string
 
 
 def error_print(function_name, error_message):
