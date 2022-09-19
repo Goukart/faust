@@ -1,11 +1,6 @@
-# import PointCloud.PointCloud as pcl
-import os
-
-import imageio
 import open3d as o3d
-import MiDaS
-import Tools      # Custom helpful functions
-# from PointCloud.PointCloud import PointCloud
+import modules.MiDaS as MiDaS
+import modules.Tools as Tools      # Custom helpful functions
 import Test
 import numpy as np
 from matplotlib import pyplot as plt
@@ -18,8 +13,8 @@ import sys
 
 # ToDo wip
 # Convert and scale to a (16 bit) unsigned integer and normalize it
-import inject
-from GUI import Gui
+import modules.inject as inject
+from modules.GUI import Gui
 
 
 def __convert(byte_array, _type=np.uint16, _from=None, _to=None):
@@ -104,7 +99,7 @@ MICMAC = "mm_out"
 # ToDo: temp
 def quick_dm(name: str):
     # dm = Test.__generate_scale_image(3480, 4640, np.float32)
-    dms = MiDaS.generate_dms(f"{color_images}{name}\..*", "large")
+    dms = MiDaS.generate_dms_regex(f"{color_images}{name}\..*", "large")
     # key = f"z_{name}"
     # print("Type of depth map: ", type(dm[key]))
     # print(dm)
@@ -188,20 +183,11 @@ def service_pc():
     #           Test to see what datatype the depth map has
     #
     ####################################################################
-    # ToDo: free up space inbetween generation. GPU is "full" after one image
     # quick_dm("l2")
-
     from PIL import Image
     import random
     # load file
     # pcd = o3d.io.read_point_cloud("PointCloud/custom.ply")
-
-    # TypeError: __init__(): incompatible constructor arguments. The following argument types are supported:
-    # 1. open3d.cuda.pybind.utility.Vector3dVector()
-    # 2. open3d.cuda.pybind.utility.Vector3dVector(arg0: numpy.ndarray[numpy.float64])
-    # 3. open3d.cuda.pybind.utility.Vector3dVector(arg0: open3d.cuda.pybind.utility.Vector3dVector)
-    # 4. open3d.cuda.pybind.utility.Vector3dVector(arg0: Iterable)
-
 
     # random
     # pcd = np.random.randint(0, 100, (100, 100))

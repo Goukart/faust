@@ -3,7 +3,7 @@
 # requires
 # pip install exif
 
-import Tools
+import modules.Tools as Tools
 
 # Exif stuff
 import piexif

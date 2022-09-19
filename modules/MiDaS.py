@@ -6,7 +6,7 @@ import re  # Utilize RegEx
 
 import numpy as np
 
-import Tools  # Custom helpful functions
+import modules.Tools as Tools  # Custom helpful functions
 
 # MiDaS dependencies
 import cv2

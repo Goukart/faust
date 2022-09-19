@@ -12,9 +12,9 @@ from functools import partial
 
 import sys
 
-import Tools
-import MiDaS
-import inject
+import modules.Tools as Tools
+import modules.MiDaS as MiDaS
+import modules.inject as inject
 import os
 from enum import Enum
 
@@ -179,6 +179,7 @@ def _correct(modul: GuiModul):
         print("No files selected")
         return -1
 
+    # ToDo: convert depth image to point cloud
     print("correction files: ", files)
     print("Do my shit")
     print()
