@@ -295,21 +295,6 @@ def service_pc():
     #           Generate Depth Map
     #
     ####################################################################
-    case = "1"
-
-    # Generate a depth map from one image
-    # dms = MiDaS.generate_dms(f"PointCloud/color/face.*", "large", "filename")
-    # quick_dm(case)
-
-
-    # Test.dry(case)
-    #depth_map = Test.__generate_scale_image(5184, 3456, np.float32)  # , _range=None)
-    regex = ""
-    file_name = ""
-    # dms = MiDaS.generate_dms(regex, "large", file_name)
-    # Tools.export_bytes_to_image(depth_map, "z_chess", depth_images)
-    # exit()
-    # ToDo save image as 16 bit single channel gray scale, is handled in Tools.py
 
     ####################################################################
     #

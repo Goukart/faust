@@ -14,15 +14,18 @@ from PIL import Image
 # ToDo clear output folder
 
 
-# ToDo only uses one source not a list, yet
+# ToDo only uses one source file not a list, yet
 def inject_exif(exif_bytes: bytes, files: list) -> int:
     if not exif_bytes or not files:
+        print("Parameter not valid:")
+        print("exif_bytes :", exif_bytes)
+        print("files:", files)
         return -1
     for file in files:
         # edit_piexif(file)
         out = Image.open(file)
         # out.save('_%s' % file, "jpeg", exif=exif_bytes)
-        out.save(file, "jpeg", exif=exif_bytes)
+        out.save(file, "png", exif=exif_bytes)
     return 0
 
 

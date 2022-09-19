@@ -12,6 +12,9 @@ import Tools  # Custom helpful functions
 import cv2
 import torch
 
+# Free cache
+from GPUtil import showUtilization as gpu_usage
+# from numba import cuda
 
 # ToDo build in fail-safes in every functions, check parameter for correctness, so functions can be used freely
 
@@ -23,6 +26,16 @@ import torch
 #           Load one or many files -> generate -> export results?
 #
 #############################################################################
+
+
+def free_gpu_cache():
+    print("Initial GPU Usage")
+    gpu_usage()
+
+    torch.cuda.empty_cache()
+
+    print("GPU Usage after emptying the cache")
+    gpu_usage()
 
 
 # Select model, default is small
@@ -49,47 +62,17 @@ def __select_model(_input):
 
 # generate a single depth map from original image
 # ToDo wip
-def __generate_depth_map(original_image, _model):
-    midas = torch.hub.load("intel-isl/MiDaS", _model)
-
-    #######################################################################
-    #
-    #      Move model to GPU if available
-    #
-    #######################################################################
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    midas.to(device)
-    midas.eval()
-
-    #######################################################################
-    #
-    #      Generate Depth Map
-    #
-    #######################################################################
+def __generate_depth_map(_input, _size, _midas) -> np.array:
     # time execution:
     start = time.time()
 
-    # Load transforms to resize and normalize the image for large or small model
-    midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms")
-
-    if _model == "DPT_Large" or _model == "DPT_Hybrid":
-        transform = midas_transforms.dpt_transform
-    else:
-        transform = midas_transforms.small_transform
-
-    # Load image and apply transforms
-    img = cv2.imread(original_image)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-    input_batch = transform(img).to(device)
-
     # Predict and resize to original resolution
     with torch.no_grad():
-        prediction = midas(input_batch)
+        prediction = _midas(_input)
 
         prediction = torch.nn.functional.interpolate(
             prediction.unsqueeze(1),
-            size=img.shape[:2],
+            size=_size,
             mode="bicubic",
             align_corners=False,
         ).squeeze()
@@ -98,50 +81,74 @@ def __generate_depth_map(original_image, _model):
 
     end = time.time()
     print("execution time: ", end - start)
+
     return output
 
 
-def generate_dms(_images_regex, _model, _out=None) -> dict[np.ndarray]:
+def generate_dms_list(_images: list, _model: str, _out: str = None) -> dict[str, np.ndarray]:
     """
-    :param _images_regex: Regular expression to "select" images
+    :param _images: All images to generate dm from in a list
     :param _model: Which model MiDaS uses
     :param _out: Name of the output file
     :return: Generates depth maps and returns them as byte arrays in a dictionary with the name as the key
     """
     output_prefix = "z_"
 
-    # Load and process images
+    # Load model
     model = __select_model(_model)
+    midas = torch.hub.load("intel-isl/MiDaS", model)
 
-    # Load files that match expression into array
-    images_as_paths = Tools.load_files(_images_regex)
-    Tools.cli_confirm_files(images_as_paths)
-    print("generate_dms in MiDaS is: ", type(images_as_paths))
+    # Move model to GPU if available
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    midas.to(device)
+    midas.eval()
 
-    output = f"{_out} -> {output_prefix}<original_file_name>" if _out is None else _out
-    print(f"\n___________________________________________________________________\n"
-          f"All given parameters:\n"
-          f"RegEx:\t{_images_regex}\n"
-          f"Images:\t{images_as_paths}\n"
-          f"Output:\t{output}\n"
-          f"Model:\t{_model}\n"
-          f"___________________________________________________________________\n")
+    # Load transforms to resize and normalize the image for large or small model
+    midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms")
+    if _model == "DPT_Large" or _model == "DPT_Hybrid":
+        transform = midas_transforms.dpt_transform
+    else:
+        transform = midas_transforms.small_transform
+
     # Generate each image
+    free_gpu_cache()
     i = 0
     depth_maps = {}
-    for image in images_as_paths:
-        depth_map = __generate_depth_map(image, model)
+    for image in _images:
+        # Load image and apply transforms
+        img = cv2.imread(image)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        input_batch = transform(img).to(device)
+        size = img.shape[:2]
+
+        depth_map = __generate_depth_map(input_batch, size, midas)
         if _out is None:
             name = f"{output_prefix}{os.path.split(image)[1].split('.')[0]}"
         else:
             name = f"{_out}_{i}"
             i += 1
 
-        print("image: ", image)
-        print(f"generated image with name/key: [{name}]")
         depth_maps[name] = depth_map
 
+        # Free up space on GPU
+        # free_gpu_cache()
+
     return depth_maps
+
+
+def generate_dms_regex(_images_regex: str, _model: str, _out: str = None) -> dict[np.ndarray]:
+    """
+    :param _images_regex: Regular expression to "select" images
+    :param _model: Which model MiDaS uses
+    :param _out: Name of the output file
+    :return: Generates depth maps and returns them as byte arrays in a dictionary with the name as the key
+    """
+    # Load files that match expression into array
+    images_as_paths = Tools.load_files(_images_regex)
+    Tools.cli_confirm_files(images_as_paths)
+    print("generate_dms in MiDaS is: ", type(images_as_paths))
+
+    return generate_dms_list(images_as_paths, _model, _out)
 
 
 # ToDo wip, changes some things need to test a little
@@ -207,7 +214,7 @@ def __cli_main():
         # output error, and return with an error code
         print(str(err))
 
-    generate_dms(images_regex, model, output_name)
+    generate_dms_regex(images_regex, model, output_name)
 
 
 if __name__ == '__main__':

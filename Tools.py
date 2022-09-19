@@ -19,13 +19,8 @@ def columnify(data: list, width: int = 120) -> str:
     columns = int(width / ljust)
     string = ""
 
-    print("longest entry: ", longest_item)
-    print("width: ", width)
-    print("how many fit: ", width / ljust)
-
     for count, item in enumerate(sorted(data), 1):
         string += item.ljust(ljust)
-        # string += item.ljust(ljust, "␣")
         if count % columns == 0:
             string += "\n"
 

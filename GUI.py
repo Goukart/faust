@@ -13,6 +13,7 @@ from functools import partial
 import sys
 
 import Tools
+import MiDaS
 import inject
 import os
 from enum import Enum
@@ -42,6 +43,7 @@ def _regex_txt(text: str) -> QLineEdit:
     return txt_regex
 
 
+# ToDo: Progressbar would be nice touch
 class GuiModul(QGridLayout):
     __selection = None  # list
     __tbx_regex = None  # QLineEdit
@@ -69,7 +71,8 @@ class GuiModul(QGridLayout):
         self.__txt_output = QTextEdit()
         self.__txt_output.setObjectName("output_box")
         self.__txt_output.setMinimumHeight(90)
-        self.__txt_output.setMinimumWidth(120*6)
+        # ToDo, remove magic numbers
+        self.__txt_output.setMinimumWidth(120*6)  # why? I want 120 character width and guessed 6px as char width
         font = QFont("Consolas")
         font.setPixelSize(13)
         self.__txt_output.setFont(font)
@@ -94,21 +97,10 @@ class GuiModul(QGridLayout):
         if not self.__selection:
             self.__txt_output.setText("No matching files found, check console for errors")
         else:
-            width = 120  # ToDo format with given width, note width is number of characters not pixels!
-            #print("actual width: ", self.__txt_output.width())  # is always 2px bigger than actual edges
-            # inner border is 5px
-            # one Character is 9px
-            #print("width in mm: ", self.__txt_output.widthMM())
-            #print("width in characters: ", int(self.__txt_output.width() / 9))
-
             # ToDo: fix rough estimation, because the size is the height not width, which I actually need
             font_width = (self.__txt_output.currentFont().pixelSize() + 2.4) / 2
-            width = int(self.__txt_output.width() / font_width)
-            print("txt width: ", self.__txt_output.width())
-            print("px size:", self.__txt_output.currentFont().pixelSize())
-            print("space", self.__txt_output.currentFont().letterSpacing())
-            # self.__txt_output.setText("mmmmmmmmmmmmmmmmmmmmmmmmmmmmmMMmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm")
-            self.__txt_output.setText(Tools.columnify(self.__selection, width))
+            width_in_characters = int(self.__txt_output.width() / font_width)
+            self.__txt_output.setText(Tools.columnify(self.__selection, width_in_characters))
 
     def get_selection(self) -> list:
         return self.__selection
@@ -116,10 +108,14 @@ class GuiModul(QGridLayout):
     def get_path(self) -> str:
         return self.__txt_path.toPlainText()
 
+    def print(self, text: str):
+        self.__txt_output.setText(text)
+
 
 def _inject_meta(exif_donor: QLineEdit, modul: GuiModul):
     files = modul.get_selection()
     if not files:
+        modul.print("No files selected")
         print("No files selected")
         return -1
 
@@ -129,20 +125,37 @@ def _inject_meta(exif_donor: QLineEdit, modul: GuiModul):
         return -1
 
     exif_data = inject.extract_exif(source)
-    print("inject meta: \n", exif_data)
-    print("into files: \n", files)
-    print()
-    # inject.inject_exif(exif_data, modul.get_selection())
-    return
+    if inject.inject_exif(exif_data, modul.get_selection()):
+        print("Injection failed, check console")
+
+    modul.print("Exif data was successfully written to files")
+    return 0
 
 
 def _generate_dm(modul: GuiModul):
     files = modul.get_selection()
     if not files:
+        modul.print("No files selected")
         print("No files selected")
         return -1
 
-    print("midas files: ", modul.get_selection())
+    # Generate a depth map from one image
+    # PointCloud/color/face.*
+    dms = MiDaS.generate_dms_list(files, "large")
+    # Write images to file
+    for key in dms:
+        Tools.export_bytes_to_image(dms[key], key, modul.get_path())
+
+    # Test.dry(case)
+    #depth_map = Test.__generate_scale_image(5184, 3456, np.float32)  # , _range=None)
+    regex = ""
+    file_name = ""
+    # dms = MiDaS.generate_dms(regex, "large", file_name)
+    # Tools.export_bytes_to_image(depth_map, "z_chess", depth_images)
+    # exit()
+    # ToDo save image as 16 bit single channel gray scale, is handled in Tools.py
+
+    print("midas files: ", files)
     print("generating dms")
     print()
 
@@ -150,10 +163,11 @@ def _generate_dm(modul: GuiModul):
 def _photogrammetry(modul: GuiModul):
     files = modul.get_selection()
     if not files:
+        modul.print("No files selected")
         print("No files selected")
         return -1
 
-    print("photogrammetry files: ", modul.get_selection())
+    print("photogrammetry files: ", files)
     print("3d reconstruction from images")
     print()
 
@@ -161,10 +175,11 @@ def _photogrammetry(modul: GuiModul):
 def _correct(modul: GuiModul):
     files = modul.get_selection()
     if not files:
+        modul.print("No files selected")
         print("No files selected")
         return -1
 
-    print("correction files: ", modul.get_selection())
+    print("correction files: ", files)
     print("Do my shit")
     print()
 
@@ -174,7 +189,6 @@ class Gui(object):
 
     # Configuration ToDo: changeable in gui (optional)
     injection_input_dir = "./tmp/render_out/"
-    injection_output_dir = "./injection_out/"
     photogrammetry_dir = "./tmp/photogrammetry/"  # images ready for photogrammetry, replaces injection out
     depth_maps_dir = "./tmp/depth_maps/"
 
