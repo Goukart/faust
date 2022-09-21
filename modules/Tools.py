@@ -3,6 +3,8 @@ import time       # Measure execution time
 import re
 import sys
 import os
+import psutil
+import nvidia_smi # pip install nvidia-ml-py3
 
 
 def columnify(data: list, width: int = 120) -> str:
@@ -194,6 +196,19 @@ def load_files(_pattern: str, _dir: str = None) -> list:
         return []
 
     return matches
+
+
+def print_usage(text: str = "Wait"):
+    print(text)
+    time.sleep(5)
+    print("Usage")
+    ram = (psutil.Process(os.getpid()).memory_info().data / 1024) / 1024
+    print(f"RAM: {round(ram, 3)} MB")  # in bytes
+    nvidia_smi.nvmlInit()
+    handle = nvidia_smi.nvmlDeviceGetHandleByIndex(0)
+    info = nvidia_smi.nvmlDeviceGetMemoryInfo(handle)
+    gpu = (info.used / 1024) / 1024
+    print(f"GPU: {round(gpu, 3)} MB")
 
 
 def cli_confirm_files(_list: list):

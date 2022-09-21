@@ -17,6 +17,7 @@ import modules.MiDaS as MiDaS
 import modules.inject as inject
 import os
 from enum import Enum
+import multiprocessing
 
 
 class Style(Enum):
@@ -141,7 +142,36 @@ def _generate_dm(modul: GuiModul):
 
     # Generate a depth map from one image
     # PointCloud/color/face.*
+    pool = multiprocessing.Pool(processes=1)
+    ddd = pool.starmap(MiDaS.generate_dms_list, [(files, "large")])
+    ddd = ddd[0]
     dms = MiDaS.generate_dms_list(files, "large")
+    # print(Tools.array_is_equal(dms, ddd))
+    if len(ddd) == len(dms):
+        for key in dms.keys():
+            Tools.array_is_equal(ddd[key], dms[key])
+
+    print("#################################################################")
+    print(dms)
+    print("-----------------------------------------------------------------")
+    print(ddd)
+    print("#################################################################")
+    #p = multiprocessing.Process(target=MiDaS.generate_dms_list, args=(files, "large"))
+    #p.start()
+    #p.join()
+    #p.close()
+
+    #print("return: ", return_dict.values())
+    #print("p ", p)
+
+    # dms = MiDaS.generate_dms_list(files, "large")
+    # del dms
+
+    Tools.print_usage("Generation finished")
+    # print(dms)
+    return
+
+    # dms = MiDaS.generate_dms_list(files, "large")
     # Write images to file
     for key in dms:
         Tools.export_bytes_to_image(dms[key], key, modul.get_path())
@@ -180,6 +210,8 @@ def _correct(modul: GuiModul):
         return -1
 
     # ToDo: convert depth image to point cloud
+    # Convert depth map to point cloud
+
     print("correction files: ", files)
     print("Do my shit")
     print()

@@ -3,7 +3,7 @@ import getopt  # Handle named cli parameter
 import os  # Handle platform independent paths
 import time  # Measure execution time
 import re  # Utilize RegEx
-
+from PIL import Image
 import numpy as np
 
 import modules.Tools as Tools  # Custom helpful functions
@@ -29,13 +29,13 @@ from GPUtil import showUtilization as gpu_usage
 
 
 def free_gpu_cache():
-    print("Initial GPU Usage")
-    gpu_usage()
+    # print("Initial GPU Usage")
+    # gpu_usage()
 
     torch.cuda.empty_cache()
 
-    print("GPU Usage after emptying the cache")
-    gpu_usage()
+    # print("GPU Usage after emptying the cache")
+    # gpu_usage()
 
 
 # Select model, default is small
@@ -82,6 +82,7 @@ def __generate_depth_map(_input, _size, _midas) -> np.array:
     end = time.time()
     print("execution time: ", end - start)
 
+    del _input
     return output
 
 
@@ -99,8 +100,9 @@ def generate_dms_list(_images: list, _model: str, _out: str = None) -> dict[str,
     midas = torch.hub.load("intel-isl/MiDaS", model)
 
     # Move model to GPU if available
+    print("CUDA available? ", torch.cuda.is_available())
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    midas.to(device)
+    midas = midas.to(device)
     midas.eval()
 
     # Load transforms to resize and normalize the image for large or small model
@@ -111,10 +113,12 @@ def generate_dms_list(_images: list, _model: str, _out: str = None) -> dict[str,
         transform = midas_transforms.small_transform
 
     # Generate each image
-    free_gpu_cache()
     i = 0
     depth_maps = {}
     for image in _images:
+        if os.path.isdir(image) or not Image.open(image).format:
+            print("Not an image, skipping")
+            continue
         # Load image and apply transforms
         img = cv2.imread(image)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -131,7 +135,7 @@ def generate_dms_list(_images: list, _model: str, _out: str = None) -> dict[str,
         depth_maps[name] = depth_map
 
         # Free up space on GPU
-        # free_gpu_cache()
+        torch.cuda.empty_cache()
 
     return depth_maps
 
