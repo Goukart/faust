@@ -17,6 +17,7 @@ import modules.MiDaS as MiDaS
 import modules.inject as inject
 import os
 from enum import Enum
+from threading import Thread
 import multiprocessing
 
 
@@ -134,40 +135,41 @@ def _inject_meta(exif_donor: QLineEdit, modul: GuiModul):
 
 
 def _generate_dm(modul: GuiModul):
+    import time  # Measure execution time
     files = modul.get_selection()
     if not files:
         modul.print("No files selected")
         print("No files selected")
         return -1
 
+    ddd = {}
+    # Multiprocessing
     # Generate a depth map from one image
     # PointCloud/color/face.*
+    multiprocessing.set_start_method('spawn')
     pool = multiprocessing.Pool(processes=1)
     ddd = pool.starmap(MiDaS.generate_dms_list, [(files, "large")])
-    ddd = ddd[0]
+
+    # Methode
+    print("Waiting to see if space gets freed up")
+    pool.close()
+    time.sleep(5)
     dms = MiDaS.generate_dms_list(files, "large")
-    # print(Tools.array_is_equal(dms, ddd))
-    if len(ddd) == len(dms):
-        for key in dms.keys():
-            Tools.array_is_equal(ddd[key], dms[key])
+
+    ddd = ddd[0]
+    for key in dms.keys():
+        print(Tools.array_is_equal(ddd[key], dms[key]))
 
     print("#################################################################")
     print(dms)
     print("-----------------------------------------------------------------")
     print(ddd)
     print("#################################################################")
-    #p = multiprocessing.Process(target=MiDaS.generate_dms_list, args=(files, "large"))
-    #p.start()
-    #p.join()
-    #p.close()
-
-    #print("return: ", return_dict.values())
-    #print("p ", p)
 
     # dms = MiDaS.generate_dms_list(files, "large")
     # del dms
 
-    Tools.print_usage("Generation finished")
+    # Tools.print_usage("Generation finished")
     # print(dms)
     return
 

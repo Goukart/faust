@@ -1,7 +1,6 @@
 import open3d as o3d
-import modules.MiDaS as MiDaS
 import modules.Tools as Tools      # Custom helpful functions
-import Test
+# import Test
 import numpy as np
 from matplotlib import pyplot as plt
 import subprocess
@@ -94,18 +93,6 @@ def __convert(byte_array, _type=np.uint16, _from=None, _to=None):
 depth_images = "PointCloud/depth/"
 color_images = "PointCloud/color/"
 MICMAC = "mm_out"
-
-
-# ToDo: temp
-def quick_dm(name: str):
-    # dm = Test.__generate_scale_image(3480, 4640, np.float32)
-    dms = MiDaS.generate_dms_regex(f"{color_images}{name}\..*", "large")
-    # key = f"z_{name}"
-    # print("Type of depth map: ", type(dm[key]))
-    # print(dm)
-    for key in dms:
-        print(type(key))
-        Tools.export_bytes_to_image(dms[key], key, depth_images)
 
 
 def photogrammetry(regex, resolution, output, skip=0):

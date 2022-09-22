@@ -94,13 +94,19 @@ def generate_dms_list(_images: list, _model: str, _out: str = None) -> dict[str,
     :return: Generates depth maps and returns them as byte arrays in a dictionary with the name as the key
     """
     output_prefix = "z_"
+    time.sleep(3)
+    print("CUDA available? ", torch.cuda.is_available())
+    if not torch.cuda.is_available():
+        print("CUDA not available ", torch.cuda.is_available())
+        return {}
 
     # Load model
+    print("load model")
     model = __select_model(_model)
     midas = torch.hub.load("intel-isl/MiDaS", model)
 
     # Move model to GPU if available
-    print("CUDA available? ", torch.cuda.is_available())
+    print("doing stuff")
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     midas = midas.to(device)
     midas.eval()
@@ -125,6 +131,8 @@ def generate_dms_list(_images: list, _model: str, _out: str = None) -> dict[str,
         input_batch = transform(img).to(device)
         size = img.shape[:2]
 
+        # ToDo make multiprocessing (Performance?), so infinite images can be processed one after another
+        # without filling memory and not releasing old memory
         depth_map = __generate_depth_map(input_batch, size, midas)
         if _out is None:
             name = f"{output_prefix}{os.path.split(image)[1].split('.')[0]}"
@@ -140,7 +148,7 @@ def generate_dms_list(_images: list, _model: str, _out: str = None) -> dict[str,
     return depth_maps
 
 
-def generate_dms_regex(_images_regex: str, _model: str, _out: str = None) -> dict[np.ndarray]:
+def generate_dms_regex(_images_regex: str, _model: str, _out: str = None) -> dict[str, np.ndarray]:
     """
     :param _images_regex: Regular expression to "select" images
     :param _model: Which model MiDaS uses
