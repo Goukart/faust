@@ -1,3 +1,4 @@
+# GUI
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QApplication,
@@ -9,16 +10,20 @@ from PyQt6.QtWidgets import (
     QTextEdit,
 )
 from functools import partial
+from enum import Enum
 
-import sys
-
+# Modules
 import modules.Tools as Tools
 import modules.MiDaS as MiDaS
 import modules.inject as inject
+
+# General
+import sys
 import os
-from enum import Enum
-from threading import Thread
 import multiprocessing
+
+# tmp
+import modules.Test as Test
 
 
 class Style(Enum):
@@ -27,14 +32,15 @@ class Style(Enum):
     output = "QTextEdit {color: #AAAAAA}"
     photogrammetry = "style=\"color:#A8A4CE;\""
     dm_generation = "style=\"color:#A8A4CE;\""
-    correction = "style=\"color:#A8A4CE;\""
+    correction = "style=\"color:#FF0000;\""
+    # correction = "style=\"color:#A8A4CE;\""
     meta_injection = "style=\"color:Tomato;\""
 
 
 def _path_txt(text: str) -> QTextEdit:
     txt_path = QTextEdit(text)
     txt_path.setStyleSheet(Style.path.value)
-    txt_path.setReadOnly(True)
+    # txt_path.setReadOnly(True)
     txt_path.setMaximumHeight(27)
     return txt_path
 
@@ -134,6 +140,7 @@ def _inject_meta(exif_donor: QLineEdit, modul: GuiModul):
     return 0
 
 
+# ToDo wip
 def _generate_dm(modul: GuiModul):
     import time  # Measure execution time
     files = modul.get_selection()
@@ -142,49 +149,19 @@ def _generate_dm(modul: GuiModul):
         print("No files selected")
         return -1
 
-    ddd = {}
     # Multiprocessing
     # Generate a depth map from one image
     # PointCloud/color/face.*
     multiprocessing.set_start_method('spawn')
     pool = multiprocessing.Pool(processes=1)
-    ddd = pool.starmap(MiDaS.generate_dms_list, [(files, "large")])
+    dms = pool.starmap(MiDaS.generate_dms_list, [(files, "large")])[0]
 
-    # Methode
-    print("Waiting to see if space gets freed up")
-    pool.close()
-    time.sleep(5)
-    dms = MiDaS.generate_dms_list(files, "large")
-
-    ddd = ddd[0]
-    for key in dms.keys():
-        print(Tools.array_is_equal(ddd[key], dms[key]))
-
-    print("#################################################################")
-    print(dms)
-    print("-----------------------------------------------------------------")
-    print(ddd)
-    print("#################################################################")
-
-    # dms = MiDaS.generate_dms_list(files, "large")
-    # del dms
-
-    # Tools.print_usage("Generation finished")
-    # print(dms)
-    return
-
-    # dms = MiDaS.generate_dms_list(files, "large")
     # Write images to file
     for key in dms:
         Tools.export_bytes_to_image(dms[key], key, modul.get_path())
 
     # Test.dry(case)
-    #depth_map = Test.__generate_scale_image(5184, 3456, np.float32)  # , _range=None)
-    regex = ""
-    file_name = ""
-    # dms = MiDaS.generate_dms(regex, "large", file_name)
-    # Tools.export_bytes_to_image(depth_map, "z_chess", depth_images)
-    # exit()
+    # depth_map = Test.__generate_scale_image(5184, 3456, np.float32)  # , _range=None)
     # ToDo save image as 16 bit single channel gray scale, is handled in Tools.py
 
     print("midas files: ", files)
@@ -192,6 +169,7 @@ def _generate_dm(modul: GuiModul):
     print()
 
 
+# ToDo
 def _photogrammetry(modul: GuiModul):
     files = modul.get_selection()
     if not files:
@@ -204,15 +182,17 @@ def _photogrammetry(modul: GuiModul):
     print()
 
 
+# ToDo wip
 def _correct(modul: GuiModul):
     files = modul.get_selection()
-    if not files:
-        modul.print("No files selected")
-        print("No files selected")
-        return -1
+    # if not files:
+    #     modul.print("No files selected")
+    #     print("No files selected")
+    #     return -1
 
     # ToDo: convert depth image to point cloud
     # Convert depth map to point cloud
+    Test.correct()
 
     print("correction files: ", files)
     print("Do my shit")

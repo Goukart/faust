@@ -101,12 +101,11 @@ def generate_dms_list(_images: list, _model: str, _out: str = None) -> dict[str,
         return {}
 
     # Load model
-    print("load model")
+    # ToDo fix "Using cache found in /home/ben/.cache/torch/hub/intel-isl_MiDaS_master" printed two times
     model = __select_model(_model)
     midas = torch.hub.load("intel-isl/MiDaS", model)
 
     # Move model to GPU if available
-    print("doing stuff")
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     midas = midas.to(device)
     midas.eval()

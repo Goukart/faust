@@ -116,50 +116,6 @@ def test(s: str) -> str:
     return s
 
 
-def ray(vector: list) -> o3d.geometry.Geometry:
-    import open3d as o3d
-    x, y, z = vector
-
-    print("Let's define some primitives")
-    mesh_box = o3d.geometry.TriangleMesh.create_box(width=x,
-                                                    height=y,
-                                                    depth=z)
-    mesh_box.compute_vertex_normals()
-    mesh_box.paint_uniform_color([0.9, 0.1, 0.1])
-
-    return mesh_box
-
-
-# receive a number of points, arrange them in a grid, apply a scale and done:
-# get np.random.rand(10000, 3), arrange in a grid and scale z, so it's not 0-1
-def grid():
-    return 0
-
-
-def generate_grid(_depths: np.array) -> o3d.geometry.PointCloud:
-    wid, hig = _depths.shape
-    return generate_gridx(wid, hig, _depths)
-
-
-def generate_gridx(_width: int, _height: int, _depths: list, _scale=1) -> o3d.geometry.PointCloud:
-    points = []
-    for i in range(0, _width):
-        for j in range(0, _height):
-            x = i
-            y = j
-            z = _depths[i][j]  # math.floor(random.random() * 10)
-            # z = math.floor(random.random() * 10)
-            # funi: image_array[i % wid][i % hig]
-
-            points.append([x, y, z])
-            # invers.append([x, y, -z])
-            # test.append([x, y, 0])
-
-    pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(points)
-    return pcd
-
-
 def service_pc():
     # pc = PointCloud()
     # pc.call()
@@ -172,76 +128,7 @@ def service_pc():
     ####################################################################
     # quick_dm("l2")
     from PIL import Image
-    import random
-    # load file
-    # pcd = o3d.io.read_point_cloud("PointCloud/custom.ply")
 
-    # random
-    # pcd = np.random.randint(0, 100, (100, 100))
-
-    # From depth map
-    image_array = np.asarray(Image.open("PointCloud/depth/z_l1.png"))
-    # inverse = -image_array
-    pcd = generate_grid(image_array)
-
-    # Test.depth_map_to_point_cloud("l1")
-
-
-    # some_pp = some + [0, 10, 0]
-    # print(some)
-    # print("\n plus shot: \n", some_pp)
-
-    o3d.visualization.draw_geometries([pcd])
-
-    # print("test selection: want all heights")
-    # print([row[-1] for row in all_hights])
-
-    # print(image_array) -> x * y Array, not all points in a list
-    sys.exit()
-
-
-    # cast "rays"
-    cameras = [[wid/2, hig/2, 50], [wid/2, hig/3, 50]]
-    rays = []
-    # print(xyz)
-    for i in range(len(xyz)):
-        c = None
-        if i > len(xyz):
-            c = 0
-        else:
-            c = 1
-        rays.append([c, i])
-    colors = [[1, 0, 0] for i in range(len(rays))]
-    points = cameras + xyz
-    print(len(points))
-    print(points)
-    line_set = o3d.geometry.LineSet(
-        points=o3d.utility.Vector3dVector(points),
-        # points=o3d.utility.Vector3dVector([[wid/2, hig/2, 50], [wid/2, hig/3, 50], [10, 10, 5], [100, 100, 5], [50, 70, 2], [0, 80, 4], [80, 0, 8]]),
-        lines=o3d.utility.Vector2iVector(rays),
-    )
-    line_set.colors = o3d.utility.Vector3dVector(colors)
-
-    # Mask to ignore certain points (primitive like only a threshold unless you get creative)
-    # https://github.com/isl-org/Open3D/issues/2291
-    # mask = xyz[:, :, 1] < 800 ???
-    # pcd.points = o3d.utility.Vector3dVector(points[mask])  # normals and colors are unchanged
-
-    # print(xyz)
-
-    pcd = o3d.geometry.PointCloud()
-    pcd2 = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(xyz)
-    pcd2.points = o3d.utility.Vector3dVector(test)
-
-    vec = ray([0.01, 0.01, 100])
-    mesh_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(
-        size=10, origin=[-0, -0, -0])
-    # o3d.visualization.draw_geometries([pcd, pcd2, mesh_frame, line_set])
-
-    o3d.visualization.draw_geometries([pcd])
-
-    sys.exit()
 
     print("Test custom point cloud from dm")
     # Load image (with PIL)as np array

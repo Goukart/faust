@@ -4,7 +4,7 @@ import re
 import sys
 import os
 import psutil
-import nvidia_smi # pip install nvidia-ml-py3
+import nvidia_smi  # pip install nvidia-ml-py3
 
 
 def columnify(data: list, width: int = 120) -> str:
@@ -148,11 +148,12 @@ def load_files(_pattern: str, _dir: str = None) -> list:
     """Load all files as Paths into array
 
     :param _pattern: [str]: All file that match this regular expression get selected.
-    :param _dir: [str, optional]: Path in which all files will be searched. If this is not given, the '_pattern' argument wil be split into path and regex.
+    :param _dir: [str, optional]:
+    Path in which all files will be searched. If this is not given, the '_pattern' argument wil be split into path
+    and regex.
     :return: [list]: A list of all files with their path.
     """
-    expression = None
-    path = None
+
     # Handle path combined with expression and both given separately
     if _dir is None:
         # ToDo test if works on Windows, using '\' as path seperator
@@ -167,7 +168,6 @@ def load_files(_pattern: str, _dir: str = None) -> list:
         print(f"No such file or directory: '{path}'")
         return []
 
-    regex = None
     # Check regular rexpression to be correct
     try:
         regex = re.compile(expression)
