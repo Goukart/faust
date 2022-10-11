@@ -32,20 +32,6 @@ def __generate_scale_image(width, height, data_type, _range=None):
     print(scale)
     return scale
 
-
-def ray(vector: list) -> o3d.geometry.Geometry:
-    x, y, z = vector
-
-    print("Let's define some primitives")
-    mesh_box = o3d.geometry.TriangleMesh.create_box(width=x,
-                                                    height=y,
-                                                    depth=z)
-    mesh_box.compute_vertex_normals()
-    mesh_box.paint_uniform_color([0.9, 0.1, 0.1])
-
-    return mesh_box
-
-
 # receive a number of points, arrange them in a grid, apply a scale and done:
 # get np.random.rand(10000, 3), arrange in a grid and scale z, so it's not 0-1
 def grid():
@@ -88,16 +74,12 @@ def plot_images(_image: str = "l1"):
     plt.show()
 
 
-def vector_length(_vector: np.array) -> float:
-    return math.sqrt(_vector[0]**2 + _vector[1]**2 + _vector[2]**2)
-
-
 def angle(_vector: np.array, _axis: np.array) -> float:
-    if vector_length(_vector) == 0:
+    if np.linalg.norm(_vector) == 0:
         return 0
 
     rad = (_vector @ _axis) / \
-          (vector_length(_vector) * vector_length(_axis))
+          (np.linalg.norm(_vector) * np.linalg.norm(_axis))
     # print("axis: ", _axis)
     # print("vec: ", _vector)
     # print("rad: ", rad)
@@ -256,8 +238,7 @@ class Camera(object):
         self.rotation = rotation  # 45
         self.dimension = dimension  # np.array([2, 1])
 
-    def get_wireframe(self, rotation) -> o3d.geometry.LineSet:
-        frame = []
+    def get_wireframe(self, rotation, scale: float = 0.1) -> o3d.geometry.LineSet:
         points = np.array([
             [-self.dimension[0]/2, self.dimension[1]/2, 3],
             [self.dimension[0]/2, self.dimension[1]/2, 3],
@@ -268,10 +249,9 @@ class Camera(object):
         ])
         # points *= np.array([1, 1, 0])  # flatten in on xy plane
 
-        # points = points @ _rotate_to_vector(self.direction)
-        points = points #@ rotation  # _rotate_to_vector(np.array([-1, 0, 0]), self.direction)
-        scale = 0.1
         points *= scale
+        # points = points @ _rotate_to_vector(self.direction)
+        points = points @ rotation  # _rotate_to_vector(np.array([-1, 0, 0]), self.direction)
         points += self.position
 
         frame = [
@@ -308,6 +288,62 @@ class Camera(object):
 def cast(a, b):
     #
     return 0
+
+
+from enum import Enum
+
+
+class CameraData(object):
+    Center: np.array
+
+    def __init__(self, center: np.array):
+        self.Center = center
+
+
+# import xml.dom.minidom
+import xml.etree.ElementTree as ET
+
+
+# XML Structure
+CENTER = './OrientationConique/Externe/Centre'
+ROTATION_MATRIX = './OrientationConique/Externe/ParamRotation/CodageMatr'
+
+
+def parse_camera() -> CameraData:
+    xml_file = '/home/ben/Workspace/Git/faust/mm_out/Ori-hand/Orientation-IMG_20220307_161951.jpg.xml'
+    # document = xml.dom.minidom.parse("college.xml")
+    tree = ET.parse(xml_file)
+
+    root = tree.getroot()
+    print('Records from XML file:')
+
+    center = np.array([float(i) for i in root.findtext(CENTER).split(" ")])
+    val = '0.968740071042690554'
+    print(val)
+    print(np.float32(val))
+    print(np.float64(val))
+    print(np.longdouble(val))
+    print(float(val))  # float is default 64
+    matrix = [
+        [np.longfloat(i) for i in root.findtext(f"{ROTATION_MATRIX}/L1").split(" ")],
+        [np.longfloat(i) for i in root.findtext(f"{ROTATION_MATRIX}/L2").split(" ")],
+        [np.longfloat(i) for i in root.findtext(f"{ROTATION_MATRIX}/L3").split(" ")]
+    ]
+    val = np.longfloat(val)
+    #matrix = [np.longfloat(i) for i in root.findtext(f"{ROTATION_MATRIX}/L1").split(" ")]
+    print("Rotation Matrix: ", matrix)
+    print("Type: ", type(matrix[0]))
+    print("Type: ", type(0.968740071042690554))
+    print("Type: ", type(np.longfloat(val)))
+    print("Center: ", center)
+    print("Matrix: ", matrix)
+    matrix = np.array(matrix, dtype=np.float16)
+    print("Matrix: ", matrix)
+
+    camera = CameraData(
+        np.array([])
+    )
+    return camera
 
 
 def some_points():
@@ -627,9 +663,8 @@ def draw_lines(_origin: np.array, _targets: np.array, color: list = [0, 1, 0], o
 
 
 def axis_colors(rotation: np.array, offset: np.array = np.array([0, 0, 0])) -> o3d.geometry.LineSet:
-    O = np.array([0, 0, 0])
-    line_set = draw_lines(O, (E @ rotation), offset=offset)
-    print("lines: ", line_set.lines)
+    origin = np.array([0, 0, 0])
+    line_set = draw_lines(origin, (E @ rotation), offset=offset)
     line_set.colors = o3d.utility.Vector3dVector([[1, 0, 0], [0, 0, 1], [0, 1, 0]])
     return line_set
 
@@ -640,11 +675,6 @@ def cent_938():
 
 def cent_942():
     return [0, 0, 0]
-
-
-center_951 = np.array(
-    [-3.42746262763605847, 0.912160136530507537, -0.109722948479107019]
-)
 
 
 def stuff_951() -> o3d.geometry.LineSet:
@@ -675,20 +705,22 @@ def stuff_951() -> o3d.geometry.LineSet:
     return line_set
 
 
-def pts_951() -> np.array:
-    points = np.array([
-        [-3.6709401432089841, 2.84011471603499821, -15.6965221529098002],
-        [-4.094261555543242, -6.66353816396305731, -18.8282844137882677],
-        [-4.77370061721167804, -0.324890206319016994, -13.7509978158501749],
-        [-4.21124296186163249, -1.1557354076065014, -8.94352281642436608],
-        [0.146862611176203028, -5.69429586843313107, -12.6277588344481853],
-        [-5.84499678466673345, -4.68946395056037879, -11.3564036968619551],
-        [-3.35681096015382341, 4.12222545332546808, -11.9105107859876647],
-        [-2.28933810680366756, -4.65434253642436868, -12.8329009440179611],
-        [-1.33654926699804077, -0.838970616826566817, -11.401248804735431],
-        [-4.26897453330121301, -3.08593243734781852, -9.93736077508776994]
-    ])
-    return points
+# 951 Stuff
+center_951 = np.array(
+    [-3.42746262763605847, 0.912160136530507537, -0.109722948479107019]
+)
+pts_951 = np.array([
+    [-3.6709401432089841, 2.84011471603499821, -15.6965221529098002],
+    [-4.094261555543242, -6.66353816396305731, -18.8282844137882677],
+    [-4.77370061721167804, -0.324890206319016994, -13.7509978158501749],
+    [-4.21124296186163249, -1.1557354076065014, -8.94352281642436608],
+    [0.146862611176203028, -5.69429586843313107, -12.6277588344481853],
+    [-5.84499678466673345, -4.68946395056037879, -11.3564036968619551],
+    [-3.35681096015382341, 4.12222545332546808, -11.9105107859876647],
+    [-2.28933810680366756, -4.65434253642436868, -12.8329009440179611],
+    [-1.33654926699804077, -0.838970616826566817, -11.401248804735431],
+    [-4.26897453330121301, -3.08593243734781852, -9.93736077508776994]
+])
 
 
 def from_file() -> o3d.geometry.PointCloud:
@@ -741,6 +773,11 @@ def correct():
     # colmap()
     # micmac()
 
+    # parse_camera()
+
+    parse_camera()
+    sys.exit()
+
     # Ray casting
     dir = np.array([-1, -1, -1])
     rot = 0.0
@@ -780,8 +817,19 @@ def correct():
         [0.0579026212295622386, -0.997023473972581953, -0.0509065693441429837],
         [0.241225954679318955, 0.0634540168595064541, -0.968392289587977184],
     ])
-    line_set = camera.get_wireframe(rotation)
-    # wh = np.array([[1, 1, 1]])
+    wh = np.array([[1, 1, 1]])
+    print("norm1: ", np.linalg.norm(wh))
+    Ewh = E/np.linalg.norm(wh)
+    n = 1/np.linalg.norm(wh)
+    Ewh = np.array([
+        [1, 0, -1]/np.linalg.norm([1, 0, -1]),
+        [0, 1, -1]/np.linalg.norm([0, 1, -1]),
+        [1, 1, 1]/np.linalg.norm(wh),
+    ])
+    print("norm1: ", Ewh)
+    zwh = axis_colors(Ewh)
+
+    line_set = camera.get_wireframe(rotation, scale=4)
     # wht = wh @ rotation
     #rotat = draw_lines(np.array([0, 0, 0]), np.concatenate((rotation, wht)), [0, 1, 1], offset=center_951)
 
@@ -792,7 +840,8 @@ def correct():
     # ccs = draw_lines(np.array([0, 0, 0]), EE, [1, 1, 0])
     ccs = axis_colors(E)
 
-    o3d.visualization.draw_geometries([_points_grid3x3, test_points, line_set, rotat, ccs])
+    cams = o3d.io.read_point_cloud("cams.ply")
+    o3d.visualization.draw_geometries([_points_grid3x3, test_points, line_set, rotat, ccs, cams])
     return
 
 
