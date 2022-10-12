@@ -290,16 +290,6 @@ def cast(a, b):
     return 0
 
 
-from enum import Enum
-
-
-class CameraData(object):
-    Center: np.array
-
-    def __init__(self, center: np.array):
-        self.Center = center
-
-
 # import xml.dom.minidom
 import xml.etree.ElementTree as ET
 
@@ -307,42 +297,37 @@ import xml.etree.ElementTree as ET
 # XML Structure
 CENTER = './OrientationConique/Externe/Centre'
 ROTATION_MATRIX = './OrientationConique/Externe/ParamRotation/CodageMatr'
+SUPPORTS = './OrientationConique/Verif/Appuis'
 
 
-def parse_camera() -> CameraData:
-    xml_file = '/home/ben/Workspace/Git/faust/mm_out/Ori-hand/Orientation-IMG_20220307_161951.jpg.xml'
+def parse_camera(xml_file: str) -> dict:
     # document = xml.dom.minidom.parse("college.xml")
     tree = ET.parse(xml_file)
 
     root = tree.getroot()
-    print('Records from XML file:')
 
-    center = np.array([float(i) for i in root.findtext(CENTER).split(" ")])
-    val = '0.968740071042690554'
-    print(val)
-    print(np.float32(val))
-    print(np.float64(val))
-    print(np.longdouble(val))
-    print(float(val))  # float is default 64
+    center = [np.longfloat(i) for i in root.findtext(CENTER).split(" ")]
     matrix = [
         [np.longfloat(i) for i in root.findtext(f"{ROTATION_MATRIX}/L1").split(" ")],
         [np.longfloat(i) for i in root.findtext(f"{ROTATION_MATRIX}/L2").split(" ")],
         [np.longfloat(i) for i in root.findtext(f"{ROTATION_MATRIX}/L3").split(" ")]
     ]
-    val = np.longfloat(val)
-    #matrix = [np.longfloat(i) for i in root.findtext(f"{ROTATION_MATRIX}/L1").split(" ")]
-    print("Rotation Matrix: ", matrix)
-    print("Type: ", type(matrix[0]))
-    print("Type: ", type(0.968740071042690554))
-    print("Type: ", type(np.longfloat(val)))
-    print("Center: ", center)
-    print("Matrix: ", matrix)
-    matrix = np.array(matrix, dtype=np.float16)
-    print("Matrix: ", matrix)
+    # some sort of verification
+    supports = [None for i in range(len(root.findall(SUPPORTS)))]
+    for i in root.findall(SUPPORTS):
+        supports[int(i.findtext("./Num"))] = [np.longfloat(t) for t in i.findtext("./Ter").split(" ")]
+        # supports.append([np.longfloat(t) for t in xml_supp.findtext("./Num").split(" ")])
 
-    camera = CameraData(
-        np.array([])
-    )
+    camera = {
+        "center": center,
+        "matrix": matrix,
+        "supports": supports,
+    }
+
+    print('Records from XML file:')
+    for key in camera:
+        print(f"{key}: {camera[key]}")
+
     return camera
 
 
@@ -775,7 +760,21 @@ def correct():
 
     # parse_camera()
 
-    parse_camera()
+    # xml_file = '/home/ben/Workspace/Git/faust/mm_out/Ori-hand/Orientation-IMG_20220307_161951.jpg.xml'
+    xml_file = '/home/ben/Workspace/Git/faust/mm_out/Ori-hand/Orientation-IMG_20220307_161938.jpg.xml'
+
+    cam = parse_camera(xml_file)
+    arr = np.array(cam["supports"], dtype=float)
+    print("arr1: ", arr)
+    print("arr2: ", appuis_938())
+    print(f"Types: {type(arr)}; {type(appuis_938())}")
+    print(f"Types: {type(arr[0])}; {type(appuis_938()[0])}")
+    print(f"Types: {type(arr[0][0])}; {type(appuis_938()[0][0])}")
+    if Tools.array_is_equal(arr, appuis_938()):
+        print("Are equal")
+    else:
+        print("Are not equal")
+
     sys.exit()
 
     # Ray casting
