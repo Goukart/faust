@@ -295,12 +295,14 @@ import xml.etree.ElementTree as ET
 
 
 # XML Structure
+XML_PATH = '/home/ben/Workspace/Git/faust/mm_out/Ori-hand/'
 CENTER = './OrientationConique/Externe/Centre'
 ROTATION_MATRIX = './OrientationConique/Externe/ParamRotation/CodageMatr'
 SUPPORTS = './OrientationConique/Verif/Appuis'
 
 
 def parse_camera(xml_file: str) -> dict:
+    xml_file = XML_PATH + xml_file
     # document = xml.dom.minidom.parse("college.xml")
     tree = ET.parse(xml_file)
 
@@ -329,6 +331,11 @@ def parse_camera(xml_file: str) -> dict:
         print(f"{key}: {camera[key]}")
 
     return camera
+
+
+xml_38 = parse_camera('Orientation-IMG_20220307_161938.jpg.xml')
+xml_51 = parse_camera('Orientation-IMG_20220307_161951.jpg.xml')
+xml_42 = parse_camera('Orientation-IMG_20220307_161942.jpg.xml')
 
 
 def some_points():
@@ -616,22 +623,6 @@ def some_points():
     return points
 
 
-def appuis_938():
-    points = np.array([
-        [-5.4428098529235589, 6.39285025659827166, -11.9415876119580293],
-        [0.742909264785465595, -5.14953114688189562, -16.1613093821674525],
-        [-6.15829655080877369, 1.5542550581647907, -10.4944708286439052],
-        [-1.4477320682253314, 4.6785689890181148, -13.8805487946971624],
-        [1.82467522785937475, 4.08673819012450146, -13.5386177104170837],
-        [-1.37237110510938276, 2.2573537099158405, -15.883120841959645],
-        [-2.44008489351142099, 12.1424925779197856, -16.8028550834303978],
-        [-3.94367914935664299, 0.459293857052059051, -9.83141597453896487],
-        [-0.0209104756087414856, 0.166883359875661053, -15.1808947962243099],
-        [0.978702765791506613, 2.83299140648815007, -8.33950177845214036]
-    ])
-    return points
-
-
 def draw_lines(_origin: np.array, _targets: np.array, color: list = [0, 1, 0], offset: np.array = np.array([0, 0, 0])) -> o3d.geometry.LineSet:
     points = np.concatenate((np.array([_origin]), _targets))
     points += offset
@@ -654,15 +645,13 @@ def axis_colors(rotation: np.array, offset: np.array = np.array([0, 0, 0])) -> o
     return line_set
 
 
-def cent_938():
-    return [2.65940031031604551, -0.396204596148851951, -1.01447047598784978]
-
-
 def cent_942():
     return [0, 0, 0]
 
 
 def stuff_951() -> o3d.geometry.LineSet:
+    xml = parse_camera('Orientation-IMG_20220307_161951.jpg.xml')
+    center = xml["center"]
     rotation = np.array([
         [0.968740071042690554, 0.043792466156151344, 0.244182093250437438],
         [0.0579026212295622386, -0.997023473972581953, -0.0509065693441429837],
@@ -672,7 +661,7 @@ def stuff_951() -> o3d.geometry.LineSet:
     front = -front @ rotation
 
     points = np.concatenate((
-        [center_951],
+        [center],
         front
         ), axis=0)
 
@@ -690,29 +679,13 @@ def stuff_951() -> o3d.geometry.LineSet:
     return line_set
 
 
-# 951 Stuff
-center_951 = np.array(
-    [-3.42746262763605847, 0.912160136530507537, -0.109722948479107019]
-)
-pts_951 = np.array([
-    [-3.6709401432089841, 2.84011471603499821, -15.6965221529098002],
-    [-4.094261555543242, -6.66353816396305731, -18.8282844137882677],
-    [-4.77370061721167804, -0.324890206319016994, -13.7509978158501749],
-    [-4.21124296186163249, -1.1557354076065014, -8.94352281642436608],
-    [0.146862611176203028, -5.69429586843313107, -12.6277588344481853],
-    [-5.84499678466673345, -4.68946395056037879, -11.3564036968619551],
-    [-3.35681096015382341, 4.12222545332546808, -11.9105107859876647],
-    [-2.28933810680366756, -4.65434253642436868, -12.8329009440179611],
-    [-1.33654926699804077, -0.838970616826566817, -11.401248804735431],
-    [-4.26897453330121301, -3.08593243734781852, -9.93736077508776994]
-])
-
-
 def from_file() -> o3d.geometry.PointCloud:
-    points = appuis_938()
+    center_38 = xml_38["center"]
+    center_42 = xml_42["center"]
+    points_38 = np.array(xml_38["supports"])
     points = np.array([
-        cent_938(),
-        cent_942()
+        center_38,
+        center_42
     ])
 
     pcd = o3d.geometry.PointCloud()
@@ -741,10 +714,13 @@ def colmap():
 
 
 def micmac():
+    xml = parse_camera('Orientation-IMG_20220307_161951.jpg.xml')
+    pts = np.array(xml["supports"])
+    center = np.array(xml["center"])
     cams = o3d.io.read_point_cloud("cams.ply")
     cams2 = o3d.io.read_point_cloud("cams2.ply")
 
-    stuff = draw_lines(pts_951(), center_951)
+    stuff = draw_lines(pts, center)
 
     o3d.visualization.draw_geometries([cams, stuff])
 
@@ -758,19 +734,20 @@ def correct():
     # colmap()
     # micmac()
 
-    # parse_camera()
+    pts_38 = np.array(xml_38["supports"])
+    cnt_38 = np.array(xml_38["center"])
 
-    # xml_file = '/home/ben/Workspace/Git/faust/mm_out/Ori-hand/Orientation-IMG_20220307_161951.jpg.xml'
-    xml_file = '/home/ben/Workspace/Git/faust/mm_out/Ori-hand/Orientation-IMG_20220307_161938.jpg.xml'
+    pts_51 = xml_51["supports"]
+    cnt_51 = xml_51["center"]
 
-    cam = parse_camera(xml_file)
-    arr = np.array(cam["supports"], dtype=float)
-    print("arr1: ", arr)
-    print("arr2: ", appuis_938())
-    print(f"Types: {type(arr)}; {type(appuis_938())}")
-    print(f"Types: {type(arr[0])}; {type(appuis_938()[0])}")
-    print(f"Types: {type(arr[0][0])}; {type(appuis_938()[0][0])}")
-    if Tools.array_is_equal(arr, appuis_938()):
+    pts_42 = np.array(xml_42["supports"])
+    cnt_42 = np.array(xml_42["center"])
+
+    arr1 = np.array(cnt_42, dtype=float)
+    arr2 = cent_942()
+    print("arr1: ", arr1)
+    print("arr2: ", arr2)
+    if Tools.array_is_equal(arr1, arr2):
         print("Are equal")
     else:
         print("Are not equal")
