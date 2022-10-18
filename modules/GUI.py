@@ -195,8 +195,7 @@ def _correct(modul: GuiModul):
     Test.correct()
 
     print("correction files: ", files)
-    print("Do my shit")
-    print()
+    print("Do my stuff")
 
 
 class Gui(object):

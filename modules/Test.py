@@ -180,6 +180,7 @@ def _rotate_to_vector(_origin: np.array, _vector: np.array) -> np.array:
     return rotation
 
 
+O = np.array([0, 0, 0])
 E = np.array([
     [1, 0, 0],
     [0, 1, 0],
@@ -228,15 +229,24 @@ def rotate_to(_vector: np.array) -> np.array:
 
 class Camera(object):
     position = np.array([0, 0, 0])  # where is the camera?
-    direction = np.array([0, 0, 0])  # What is it looking at
-    rotation = 0  # how is it "twisted", is te image upright etc.
+    # direction = np.array([0, 0, 0])  # What is it looking at
+    # rotation = 0  # how is it "twisted", is te image upright etc.
     dimension = np.array([0, 0])  # what are the dimensions of the image
+    # rather (4,3) ? whats the tpye of that?
+    supports: np.array
+    rotation_matrix: np.array
+    # ToDo: rotation?
 
-    def __init__(self, position: np.array, direction: np.array, rotation: float, dimension: np.array):
-        self.position = position  # np.array([1, 1, 4])
-        self.direction = direction  # np.array([0, 0, -1])
-        self.rotation = rotation  # 45
-        self.dimension = dimension  # np.array([2, 1])
+    # def __init__(self, position: np.array, direction: np.array, rotation: float, dimension: np.array):
+    def __init__(self, xml_file: str):
+        camera_data = parse_camera(xml_file)
+        self.position = camera_data["center"]  # np.array([1, 1, 4])
+        # self.direction = direction  # np.array([0, 0, -1])
+        # self.rotation = rotation  # 45
+        self.dimension = np.array([4, 3])
+
+        self.supports = camera_data["supports"]
+        self.rotation_matrix = camera_data["matrix"]
 
     def get_wireframe(self, rotation, scale: float = 0.1) -> o3d.geometry.LineSet:
         points = np.array([
@@ -279,6 +289,14 @@ class Camera(object):
 
         return line_set
 
+    def get_position(self):
+        return self.position
+
+    def get_rotation(self):
+        return self.rotation_matrix
+
+    def get_supports(self):
+        return self.supports
 
 # I need a camera position and orientation -> two vectors + rotation
 # also an image, that the camera captured with scale and distance from camera, so that a ray cast from
@@ -309,11 +327,11 @@ def parse_camera(xml_file: str) -> dict:
     root = tree.getroot()
 
     center = [np.longfloat(i) for i in root.findtext(CENTER).split(" ")]
-    matrix = [
+    matrix = np.array([
         [np.longfloat(i) for i in root.findtext(f"{ROTATION_MATRIX}/L1").split(" ")],
         [np.longfloat(i) for i in root.findtext(f"{ROTATION_MATRIX}/L2").split(" ")],
         [np.longfloat(i) for i in root.findtext(f"{ROTATION_MATRIX}/L3").split(" ")]
-    ]
+    ])
     # some sort of verification
     supports = [None for i in range(len(root.findall(SUPPORTS)))]
     for i in root.findall(SUPPORTS):
@@ -334,8 +352,8 @@ def parse_camera(xml_file: str) -> dict:
 
 
 xml_38 = parse_camera('Orientation-IMG_20220307_161938.jpg.xml')
-xml_51 = parse_camera('Orientation-IMG_20220307_161951.jpg.xml')
 xml_42 = parse_camera('Orientation-IMG_20220307_161942.jpg.xml')
+xml_51 = parse_camera('Orientation-IMG_20220307_161951.jpg.xml')
 
 
 def some_points():
@@ -645,10 +663,6 @@ def axis_colors(rotation: np.array, offset: np.array = np.array([0, 0, 0])) -> o
     return line_set
 
 
-def cent_942():
-    return [0, 0, 0]
-
-
 def stuff_951() -> o3d.geometry.LineSet:
     xml = parse_camera('Orientation-IMG_20220307_161951.jpg.xml')
     center = xml["center"]
@@ -691,11 +705,6 @@ def from_file() -> o3d.geometry.PointCloud:
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(points)
 
-    print("points:")
-    print("o3d: ", pcd)
-    print("points raw: ", points)
-    print("points: ", pcd.points)
-
     colors = [[1, 0, 0] for i in range(len(points))]
     pcd.colors = o3d.utility.Vector3dVector(colors)
     return pcd
@@ -724,6 +733,34 @@ def micmac():
 
     o3d.visualization.draw_geometries([cams, stuff])
 
+
+def cmpr(arr1, arr2):
+    print("arr1: ", arr1)
+    print("arr2: ", arr2)
+    if Tools.array_is_equal(arr1, arr2):
+        print("Are equal")
+    else:
+        print("Are not equal")
+
+
+def gen_plane(width: int, height: int, scale: float = 1., origin: np.array = np.array([0, 0, 0])) -> np.array:
+    origin = origin * scale
+    plane = []
+    for y in range(height):
+        for x in range(width):
+            plane.append([x * scale, y * scale, 0] + origin)
+
+    return np.array(plane)
+
+
+def project_plane(points: np.array, camera: Camera):
+    # Rotate to face camera direction and move to origin
+    plane_pts = points @ camera.rotation_matrix
+    # center and move to origin
+    plane_pts = plane_pts + camera.get_position()
+    return plane_pts
+
+
 def correct():
     # o3d.io.write_point_cloud("ascii.ply", cams, True)
     # points = np.asarray(cams.colors)
@@ -734,92 +771,60 @@ def correct():
     # colmap()
     # micmac()
 
-    pts_38 = np.array(xml_38["supports"])
-    cnt_38 = np.array(xml_38["center"])
+    # Cameras
+    c_51 = Camera('Orientation-IMG_20220307_161951.jpg.xml')
+    c_42 = Camera('Orientation-IMG_20220307_161942.jpg.xml')
+    c_38 = Camera('Orientation-IMG_20220307_161938.jpg.xml')
 
-    pts_51 = xml_51["supports"]
-    cnt_51 = xml_51["center"]
+    # Original Supports, without any manipulation
+    sup_raw = draw_lines(O, c_51.supports, [0, 0, 0], offset=c_51.position)
+    rotated = np.array(c_51.supports) @ c_51.rotation_matrix
 
-    pts_42 = np.array(xml_42["supports"])
-    cnt_42 = np.array(xml_42["center"])
+    # Supports rotated with camera rotation matrix
+    sup_rot = draw_lines(O, rotated, [0, 1, 1], offset=c_51.position)
+    cams = o3d.io.read_point_cloud("hand.ply")
 
-    arr1 = np.array(cnt_42, dtype=float)
-    arr2 = cent_942()
-    print("arr1: ", arr1)
-    print("arr2: ", arr2)
-    if Tools.array_is_equal(arr1, arr2):
-        print("Are equal")
-    else:
-        print("Are not equal")
+    # Display axis of rotation matrix
+    rotcoord = axis_colors(c_51.rotation_matrix, c_51.position)
+    camera_reconstr = c_51.get_wireframe(c_51.rotation_matrix, scale=0.1)
+
+    # Create and do things with plane
+    w, h, s = [30, 40, 0.5]
+    offset = np.array([-w/2, -h/2, 25.])
+    plane_pts = project_plane(gen_plane(w, h, s, offset), c_51)
+    plane_pts = from_file()
+    plane_pc = o3d.geometry.PointCloud()
+    plane_pc.points = o3d.utility.Vector3dVector(plane_pts)
+
+    # cams.points = o3d.utility.Vector3dVector(np.array(cams.points) @ camera_51.rotation_matrix)
+    # o3d.visualization.draw_geometries([sup_raw, sup_rot, cams, rotcoord, camera_reconstr, plane_pc])
+    o3d.visualization.draw_geometries([cams, rotcoord, camera_reconstr, plane_pc])
 
     sys.exit()
-
     # Ray casting
-    dir = np.array([-1, -1, -1])
-    rot = 0.0
-    dim = np.array([4, 3])
-    camera = Camera(center_951, dir, rot, dim)
-    # cameras = [[1, 1, 4]]
-    grid3x3 = np.array([
-        camera.position,
-        [0, 0, 0], [1, 0, 0], [2, 0, 0],
-        [0, 1, 0], [1, 1, 0], [2, 1, 0],
-        [0, 2, 0], [1, 2, 0], [2, 2, 0]
-    ])
-    rays = []
-    # points.append(cameras[0])
-
-    #print(points)
-    for i in range(len(grid3x3)):
-        rays.append([0, i])
-    colors = [[1, 0, 0] for i in range(len(rays))]
-    # print(len(points))
-    # print(len(rays))
-    line_set = o3d.geometry.LineSet(
-        points=o3d.utility.Vector3dVector(grid3x3),
-        lines=o3d.utility.Vector2iVector(rays),
-    )
-    line_set.colors = o3d.utility.Vector3dVector(colors)
-
+    grid3x3 = gen_plane(3, 3)
     _points_grid3x3 = o3d.geometry.PointCloud()
     _points_grid3x3.points = o3d.utility.Vector3dVector(grid3x3)
+    line_set = draw_lines(c_51.position, plane_pts, [1, 0, 0])
 
     test_points = o3d.geometry.PointCloud()
     test_points.points = o3d.utility.Vector3dVector(some_points())
-    # [_points_grid3x3, line_set, cams, test_points, file]
 
-    rotation = np.array([
-        [0.968740071042690554, 0.043792466156151344, 0.244182093250437438],
-        [0.0579026212295622386, -0.997023473972581953, -0.0509065693441429837],
-        [0.241225954679318955, 0.0634540168595064541, -0.968392289587977184],
-    ])
-    wh = np.array([[1, 1, 1]])
-    print("norm1: ", np.linalg.norm(wh))
-    Ewh = E/np.linalg.norm(wh)
-    n = 1/np.linalg.norm(wh)
-    Ewh = np.array([
-        [1, 0, -1]/np.linalg.norm([1, 0, -1]),
-        [0, 1, -1]/np.linalg.norm([0, 1, -1]),
-        [1, 1, 1]/np.linalg.norm(wh),
-    ])
-    print("norm1: ", Ewh)
-    zwh = axis_colors(Ewh)
-
-    line_set = camera.get_wireframe(rotation, scale=4)
+    # line_set = camera.get_wireframe(rotation, scale=4)
     # wht = wh @ rotation
     #rotat = draw_lines(np.array([0, 0, 0]), np.concatenate((rotation, wht)), [0, 1, 1], offset=center_951)
 
-    rotat = axis_colors(rotation, center_951)
+    rotat = axis_colors(c_51.rotation_matrix, c_51.position)
     # draw_lines(np.array([0, 0, 0]), rotation, [0, 1, 1], offset=center_951)
 
     # EE = np.concatenate((E, wh))
     # ccs = draw_lines(np.array([0, 0, 0]), EE, [1, 1, 0])
     ccs = axis_colors(E)
 
-    cams = o3d.io.read_point_cloud("cams.ply")
+    cams = o3d.io.read_point_cloud("hand.ply")
     o3d.visualization.draw_geometries([_points_grid3x3, test_points, line_set, rotat, ccs, cams])
-    return
 
+    return
 
     # load file
     # pcd = o3d.io.read_point_cloud("PointCloud/C3DC_BigMac.ply")
