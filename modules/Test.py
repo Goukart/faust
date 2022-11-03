@@ -39,28 +39,31 @@ def grid():
     return 0
 
 
-def grayscale_to_points(_image: np.array) -> np.array:
-    _width, _height = _image.shape
+def grayscale_to_points(_image_path: str, _center: bool = False) -> np.array:
+    img = Image.open(_image_path)
+    image_array = np.array(img)
+
+    # ToDo: might be a problem, since array orientation is different to image
+    _width, _height = image_array.shape
 
     points = []
     # ToDo use numpy for speed
-    for i in range(0, _width):
-        for j in range(0, _height):
-            x = i
-            y = j
-            z = _image[i][j]  # math.floor(random.random() * 10)
-            # z = math.floor(random.random() * 10)
-            # funi: image_array[i % wid][i % hig]
-
+    for y in range(0, _height):
+        for x in range(0, _width):
+            z = image_array[x][y]
             points.append([x, y, z])
             # invers.append([x, y, -z])
             # test.append([x, y, 0])
 
+    if _center:
+        offset = np.array([-_width / 2, -_height / 2, 0.])
+        points += offset
+
     return np.array(points, dtype=float)
 
 
-def grayscale_to_point_cloud(_depths: np.array, _scale=1) -> o3d.geometry.PointCloud:
-    points = grayscale_to_points(_depths)
+def grayscale_to_point_cloud(_image_path: str, _scale=1) -> o3d.geometry.PointCloud:
+    points = grayscale_to_points(_image_path)
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(points)
     return pcd
@@ -233,6 +236,13 @@ def rotate_to(_vector: np.array) -> np.array:
     return line_set
 
 
+def side_of_triangle(fov: float, distance: float):
+    alpha = fov / 2
+    half_side = distance * np.tan(alpha)
+
+    return half_side * 2
+
+
 class Camera(object):
     # Attributes
     # private
@@ -253,17 +263,32 @@ class Camera(object):
         self.position = camera_data["center"]  # np.array([1, 1, 4])
         # self.direction = direction  # np.array([0, 0, -1])
         # self.rotation = rotation  # 45
-        self.dimension = np.array([3480, 4640])  # ToDo: get resolution from file
-        ratio = Fraction(self.dimension[0], self.dimension[1])
-        # print(f"Image ration is: {ratio.numerator} by {ratio.denominator}")
-        self.ratio = (ratio.numerator, ratio.denominator)
+        # self.dimension = np.array([3480, 4640])  # ToDo: get resolution from file
+        self.dimension = np.array([750, 1000])
+        fraction = Fraction(self.dimension[1], self.dimension[0])  # ToDo: what is default oriantation?
+        # print(f"Image ration is: {fraction.numerator} by {fraction.denominator}")
+        self.ratio = (fraction.numerator, fraction.denominator)
 
         self.supports = camera_data["supports"]
         self.rotation_matrix = camera_data["matrix"]
 
-    def get_wireframe(self, rotation, scale: float = 0.1) -> o3d.geometry.LineSet:
+    def get_wireframe(self, rotation) -> o3d.geometry.LineSet:
         # ToDo: calculate distance properly
-        distance = 5
+        sensor_w = 24
+        sensor_h = 36
+        fov_hor = np.degrees(2 * np.arctan(sensor_w / (2 * 28)))
+        fov_ver = np.degrees(2 * np.arctan(sensor_h / (2 * 28)))
+        print("fov horizontal: ", fov_hor)
+        print("fov vertical: ", fov_ver)
+
+        distance = 6.0
+
+        # Define all points of the frame using the ratio as lengths
+
+        converter = self.ratio[1] / 3.857
+        print("ratio: ", self.ratio)
+        self.ratio = [self.ratio[0] * converter, self.ratio[1] * converter]
+        print("ratio: ", self.ratio)
         points = np.array([
             [-self.ratio[0]/2, self.ratio[1]/2, distance],
             [self.ratio[0]/2, self.ratio[1]/2, distance],
@@ -272,13 +297,13 @@ class Camera(object):
             [0, 0, 0],
             [0, 0, 10]
         ])
-        # points *= np.array([1, 1, 0])  # flatten in on xy plane
 
-        points *= scale
-        # points = points @ _rotate_to_vector(self.direction)
-        points = points @ rotation  # _rotate_to_vector(np.array([-1, 0, 0]), self.direction)
+        # Rotate wireframe to fit camera orientation
+        points = points @ rotation
+        # Move to camera position
         points += self.position
 
+        # Define the lines and color of the frame
         frame = [
             [0, 1],
             [0, 2],
@@ -291,17 +316,13 @@ class Camera(object):
             [4, 5]
         ]
         colors = [[0, 1, 0] for i in range(len(frame))]
-        # print(len(points))
-        # print(len(rays))
+
+        # Create a line set that o3d can display
         line_set = o3d.geometry.LineSet(
             points=o3d.utility.Vector3dVector(points),
-            # points=o3d.utility.Vector3dVector([
-            # [wid/2, hig/2, 50], [wid/2, hig/3, 50], [10, 10, 5],
-            # [100, 100, 5], [50, 70, 2], [0, 80, 4], [80, 0, 8]]),
             lines=o3d.utility.Vector2iVector(frame),
         )
         line_set.colors = o3d.utility.Vector3dVector(colors)
-
         return line_set
 
     def get_position(self):
@@ -313,13 +334,59 @@ class Camera(object):
     def get_supports(self):
         return self.supports
 
-    def project_plane(self, points: np.array, distance: int):
-        print(points.shape)
+    def project_plane(self, points: np.array, distance: float) -> o3d.geometry.PointCloud:
+        print("given: ", points.shape)  # well it's a list of points with 3 values
+
+        # How it gets called:
+        # image_array = grayscale_to_points("PointCloud/depth/z_l1.png")
+        # projection = camera.project_plane(image_array, 6.6723277798356282)
+
+
         # Rotate to face camera direction and move to origin
-        plane_pts = points @ self.rotation_matrix
+        #plane_pts = points @ self.rotation_matrix
         # center and move to origin
-        plane_pts = plane_pts + self.position
-        return plane_pts
+        #plane_pts = plane_pts + self.position
+
+        # ToDo: scale image without magic number
+        # ToDo: get focal length from xml
+        print("FOV from datasheet")
+        f = 4.26  # focal length, but exif lists it as 4.26
+        fov_h = np.degrees(2 * np.arctan(6.433 / f))
+        fov_v = np.degrees(2 * np.arctan(4.921 / f))
+        print("fov horizontal: ", fov_h)
+        print("fov vertical: ", fov_v)
+        #scale = 0.102
+        #print(points)
+        #points *= scale
+        #print(points)
+
+
+        print("FOV from 35mm equivalent")
+        sensor_w = 24
+        sensor_h = 36
+        fov_hor = np.degrees(2 * np.arctan(sensor_w / (2 * 28)))
+        # Angle_of_view = (180 / np.pi) * 2 * np.arctan(image_size / (2 * Focal length * (Magnification + 1)))
+        fov_ver = float(np.degrees(2 * np.arctan(sensor_h / (2 * 28))))
+        print("fov horizontal: ", fov_hor)
+        print("fov vertical: ", fov_ver)
+
+        # plane_dim = [image_array]  # this is a plain list of all points, lets assume it is not ordered.
+        # Then I need to traverse all points and find the corners
+        # In this case I already know the corners gonna be +- 20, +- 15
+        print("side: ", side_of_triangle(fov_ver, 6))
+        print("side: ", side_of_triangle(fov_ver, 6)/2)
+
+        converter = 3.857 / 40
+        points *= converter
+
+        # move forward
+        points += np.array([0, 0, distance])
+
+        plane_pc = o3d.geometry.PointCloud()
+        plane_pc.points = o3d.utility.Vector3dVector(project_plane(points, self))
+
+        return plane_pc
+
 
 # I need a camera position and orientation -> two vectors + rotation
 # also an image, that the camera captured with scale and distance from camera, so that a ray cast from
@@ -367,9 +434,9 @@ def parse_camera(xml_file: str) -> dict:
         "supports": supports,
     }
 
-    print('Records from XML file:')
-    for key in camera:
-        print(f"{key}: {camera[key]}")
+    # print('Records from XML file:')
+    # for key in camera:
+    #     print(f"{key}: {camera[key]}")
 
     return camera
 
@@ -766,12 +833,16 @@ def cmpr(arr1, arr2):
         print("Are not equal")
 
 
-def gen_plane(width: int, height: int, scale: float = 1., origin: np.array = np.array([0, 0, 0])) -> np.array:
+def gen_plane(width: int, height: int, scale: float = 1., origin: np.array = np.array([0, 0, 0]), center=False) -> np.array:
     origin = origin * scale
     plane = []
     for y in range(height):
         for x in range(width):
             plane.append([x * scale, y * scale, 0] + origin)
+
+    if center:
+        offset = np.array([-width / 2, -height / 2, 0.])
+        plane += offset
 
     return np.array(plane)
 
@@ -795,7 +866,7 @@ def pc_from_image(img_path: str) -> o3d.geometry.PointCloud:
 def minimal_correction_example():
     print("minimal_correction_example")
     # Make cube
-    size = 3 # half a edge
+    size = 3  # half a edge
     points = np.array([
         [-size, -size, -size],
         [-size, size, -size],
@@ -832,13 +903,15 @@ def minimal_correction_example():
 
     # Camera
     camera = Camera("test.xml")
-    cam = camera.get_wireframe(camera.rotation_matrix)
-    # projection = cam.project_plane()
-    f = Fraction(1920, 1080)
-    print(f"ratio: {f.numerator} by {f.denominator}")
+    cam_pc = camera.get_wireframe(camera.rotation_matrix)
+
+    # Depth map projection
+    image_array = grayscale_to_points("PointCloud/depth/z_l1.png", True)
+    image_array = gen_plane(40, 30, center=True)
+    projection = camera.project_plane(image_array, 6.0)
 
     # wh = draw_lines(O, np.array([[1, 1, 1]]))
-    o3d.visualization.draw_geometries([axis_colors(), cube, cam])
+    o3d.visualization.draw_geometries([axis_colors(), cube, cam_pc, projection])
 
 
 def correct():
@@ -880,7 +953,7 @@ def correct():
 
     # Use real depth map
     img = Image.open("PointCloud/depth/z_l1.png")
-    image_array = grayscale_to_points(np.array(img))
+    image_array = __grayscale_to_points(np.array(img))
     image_array *= 0.01
     w, h = [img.width * 0.01, img.height * 0.01]
     offset = np.array([-w / 2, -h / 2, 0.])
