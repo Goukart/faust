@@ -236,23 +236,17 @@ def rotate_to(_vector: np.array) -> np.array:
     return line_set
 
 
-def side_of_triangle(fov: float, distance: float):
-    alpha = fov / 2
-    half_side = distance * np.tan(alpha)
-
-    return half_side * 2
+def side_of_triangle(_angle: float, _distance: float):
+    return _distance * np.tan(np.radians(_angle))
 
 
 class Camera(object):
     # Attributes
-    # private
-    # position: where is the camera?
-    # rotation_matrix: coordinate system of the camera, i think z is direction? If so direction attr is redundant
     # dimension: what are the dimensions of the image
     #  -> rather (4,3) ? whats the tpye of that?
+    _SENSOR_W = 24  # defined in 35mm film
+    _SENSOR_H = 36  # defined in 35mm film
 
-    # Pending I think?
-    # direction: What is it looking at
     # ToDo: rotation?
     # rotation: how is it "twisted", is te image upright etc.
     # supports: some random points i don't know what they are for yet
@@ -268,27 +262,34 @@ class Camera(object):
         fraction = Fraction(self.dimension[1], self.dimension[0])  # ToDo: what is default oriantation?
         # print(f"Image ration is: {fraction.numerator} by {fraction.denominator}")
         self.ratio = (fraction.numerator, fraction.denominator)
+        self.rotation_matrix = camera_data["matrix"]  # ToDo, borematrix or smth, z? is looking down the "barrel"
+        # z is direction its looking to?
+        self.focal_length_35mm = 28.0  # ToDo from xml or file meta
 
         self.supports = camera_data["supports"]
-        self.rotation_matrix = camera_data["matrix"]
+
+    def fov(self, image_plane: float) -> float:
+        # Angle_of_view = (180 / np.pi) * 2 * np.arctan(image_size / (2 * Focal length * (Magnification + 1)))
+        return float(np.degrees(2 * np.arctan(image_plane / (2 * self.focal_length_35mm))))
 
     def get_wireframe(self, rotation) -> o3d.geometry.LineSet:
         # ToDo: calculate distance properly
-        sensor_w = 24
-        sensor_h = 36
-        fov_hor = np.degrees(2 * np.arctan(sensor_w / (2 * 28)))
-        fov_ver = np.degrees(2 * np.arctan(sensor_h / (2 * 28)))
+        fov_hor = self.fov(self._SENSOR_W)
+        fov_ver = self.fov(self._SENSOR_H)
         print("fov horizontal: ", fov_hor)
         print("fov vertical: ", fov_ver)
 
         distance = 6.0
 
-        # Define all points of the frame using the ratio as lengths
+        side = side_of_triangle(fov_ver / 2, distance) * 2
+        print("side of triangle: ", side)
 
-        converter = self.ratio[1] / 3.857
+        converter = side / (abs(-self.ratio[1]/2) + self.ratio[1]/2)
         print("ratio: ", self.ratio)
-        self.ratio = [self.ratio[0] * converter, self.ratio[1] * converter]
-        print("ratio: ", self.ratio)
+        self.ratio = (self.ratio[0] * converter, self.ratio[1] * converter)
+        print("scaled ratio: ", self.ratio)
+
+        # Define all points of the frame using the ratio as lengths
         points = np.array([
             [-self.ratio[0]/2, self.ratio[1]/2, distance],
             [self.ratio[0]/2, self.ratio[1]/2, distance],
@@ -334,13 +335,13 @@ class Camera(object):
     def get_supports(self):
         return self.supports
 
-    def project_plane(self, points: np.array, distance: float) -> o3d.geometry.PointCloud:
-        print("given: ", points.shape)  # well it's a list of points with 3 values
+    def project_plane(self, _points: np.array, distance: float) -> o3d.geometry.PointCloud:
+        points = _points.copy()
+        print("given: ", points.shape)  # well it's a list of points with 3 values (x, y, z)
 
         # How it gets called:
         # image_array = grayscale_to_points("PointCloud/depth/z_l1.png")
         # projection = camera.project_plane(image_array, 6.6723277798356282)
-
 
         # Rotate to face camera direction and move to origin
         #plane_pts = points @ self.rotation_matrix
@@ -349,35 +350,29 @@ class Camera(object):
 
         # ToDo: scale image without magic number
         # ToDo: get focal length from xml
-        print("FOV from datasheet")
-        f = 4.26  # focal length, but exif lists it as 4.26
-        fov_h = np.degrees(2 * np.arctan(6.433 / f))
-        fov_v = np.degrees(2 * np.arctan(4.921 / f))
-        print("fov horizontal: ", fov_h)
-        print("fov vertical: ", fov_v)
-        #scale = 0.102
-        #print(points)
-        #points *= scale
-        #print(points)
-
-
         print("FOV from 35mm equivalent")
-        sensor_w = 24
-        sensor_h = 36
-        fov_hor = np.degrees(2 * np.arctan(sensor_w / (2 * 28)))
-        # Angle_of_view = (180 / np.pi) * 2 * np.arctan(image_size / (2 * Focal length * (Magnification + 1)))
-        fov_ver = float(np.degrees(2 * np.arctan(sensor_h / (2 * 28))))
+        fov_hor = self.fov(self._SENSOR_W)
+        fov_ver = self.fov(self._SENSOR_H)
         print("fov horizontal: ", fov_hor)
         print("fov vertical: ", fov_ver)
 
         # plane_dim = [image_array]  # this is a plain list of all points, lets assume it is not ordered.
         # Then I need to traverse all points and find the corners
         # In this case I already know the corners gonna be +- 20, +- 15
-        print("side: ", side_of_triangle(fov_ver, 6))
-        print("side: ", side_of_triangle(fov_ver, 6)/2)
+        #print("side: ", side_of_triangle(fov_ver, 6))
+        #print("side: ", side_of_triangle(fov_ver, 6)/2)
+        #switch trunken oder bundlen?
 
-        converter = 3.857 / 40
+        converter = (side_of_triangle(fov_ver / 2, distance) * 2) / 30
+        print("proj_plane, converter: ", converter)
         points *= converter
+
+        #points = np.array([[-20, -15, 0],
+        #                   [-20, 15, 0],
+        #                   [20, -15, 0],
+        #                   [20, 15, 0]
+        #                   ], dtype=float)
+        #points *= converter
 
         # move forward
         points += np.array([0, 0, distance])
@@ -835,14 +830,15 @@ def cmpr(arr1, arr2):
 
 def gen_plane(width: int, height: int, scale: float = 1., origin: np.array = np.array([0, 0, 0]), center=False) -> np.array:
     origin = origin * scale
+
+    f = lambda i, o: i * scale
+    if center:
+        f = lambda i, r: -(r/2) + i * r/(r-1)
+
     plane = []
     for y in range(height):
         for x in range(width):
-            plane.append([x * scale, y * scale, 0] + origin)
-
-    if center:
-        offset = np.array([-width / 2, -height / 2, 0.])
-        plane += offset
+            plane.append([f(x, width), f(y, height), 0] + origin)
 
     return np.array(plane)
 
@@ -865,6 +861,30 @@ def pc_from_image(img_path: str) -> o3d.geometry.PointCloud:
 
 def minimal_correction_example():
     print("minimal_correction_example")
+
+    # Test, to get image array dimensions from array itself
+    array = np.array([
+        [-1, 1, 0],
+        [-1, 0, 0],
+        [-1, -1, 0],
+        [0, 1, 0],
+        [0, 0, 0],
+        [0, -1, 0],
+        [1, 1, 0],
+        [1, 0, 0],
+        [1, -1, 0],
+    ])
+    print(array)
+
+    print("##################")
+
+    y = array.T
+    y = y[0]
+    y = np.sort(y, axis=None)
+    # print(y)
+    print(f"From {y[0]} to {y[-1]}")
+
+    sys.exit()
     # Make cube
     size = 3  # half a edge
     points = np.array([
@@ -908,10 +928,19 @@ def minimal_correction_example():
     # Depth map projection
     image_array = grayscale_to_points("PointCloud/depth/z_l1.png", True)
     image_array = gen_plane(40, 30, center=True)
+    image_array = gen_plane(4, 3, center=True)
     projection = camera.project_plane(image_array, 6.0)
 
     # wh = draw_lines(O, np.array([[1, 1, 1]]))
-    o3d.visualization.draw_geometries([axis_colors(), cube, cam_pc, projection])
+    check = camera.project_plane(image_array, 6)
+    o3d.visualization.draw_geometries([axis_colors(), cube, cam_pc, projection, check])
+
+    # check0 = camera.project_plane(image_array, 1)
+    # check1 = camera.project_plane(image_array, 2)
+    # check2 = camera.project_plane(image_array, 3)
+    # check3 = camera.project_plane(image_array, 4)
+    # check4 = camera.project_plane(image_array, 6)
+    # o3d.visualization.draw_geometries([axis_colors(), check0, check1, check2, check3, check4])
 
 
 def correct():
