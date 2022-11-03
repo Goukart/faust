@@ -859,10 +859,19 @@ def pc_from_image(img_path: str) -> o3d.geometry.PointCloud:
     return plane_pts
 
 
+def array_dimensions(_array: np.array) -> tuple:
+    #x = _array.T  # Transpose to have an array for every axis respectively
+    #x = x[0]  # select all x values
+    #x = np.sort(x, axis=None)
+    #print(f"From {x[0]} to {x[-1]}")
+
+    w = np.sort(_array.T[0], axis=None)
+    h = np.sort(_array.T[1], axis=None)
+    return np.abs(w[0] - w[-1])+1, np.abs(h[0] - h[-1])+1
+
+
 def minimal_correction_example():
     print("minimal_correction_example")
-
-    # Test, to get image array dimensions from array itself
     array = np.array([
         [-1, 1, 0],
         [-1, 0, 0],
@@ -874,17 +883,11 @@ def minimal_correction_example():
         [1, 0, 0],
         [1, -1, 0],
     ])
-    print(array)
+    array = grayscale_to_points("PointCloud/depth/z_l1.png", True)
 
-    print("##################")
-
-    y = array.T
-    y = y[0]
-    y = np.sort(y, axis=None)
-    # print(y)
-    print(f"From {y[0]} to {y[-1]}")
-
+    print("array dimensions: ", array_dimensions(array))
     sys.exit()
+
     # Make cube
     size = 3  # half a edge
     points = np.array([
