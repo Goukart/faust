@@ -62,6 +62,34 @@ def grayscale_to_points(_image_path: str, _center: bool = False) -> np.array:
     return np.array(points, dtype=float)
 
 
+def colored_flat_points(_image_path: str, _center: bool = False) -> o3d.geometry.PointCloud:
+    img = Image.open(_image_path)
+    image_array = np.array(img)
+
+    # ToDo: might be a problem, since array orientation is different to image
+    _width, _height = image_array.shape
+
+    points = []
+    z = []
+    # ToDo use numpy for speed
+    for y in range(0, _height):
+        for x in range(0, _width):
+            z.append(image_array[x][y]/256)  # Magic number is max value of image gray scale
+            points.append([x, y, 0])
+
+    if _center:
+        offset = np.array([-_width / 2, -_height / 2, 0.])
+        points += offset
+
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(points)
+    colors = [[z[i], z[i], z[i]] for i in range(image_array.size)]
+    #print( np.sort(z, axis=None)[0])
+    #print( np.sort(z, axis=None)[-1])
+    pcd.colors = o3d.utility.Vector3dVector(colors)
+    return pcd
+
+
 def grayscale_to_point_cloud(_image_path: str, _scale=1) -> o3d.geometry.PointCloud:
     points = grayscale_to_points(_image_path)
     pcd = o3d.geometry.PointCloud()
@@ -363,7 +391,7 @@ class Camera(object):
         #print("side: ", side_of_triangle(fov_ver, 6)/2)
         #switch trunken oder bundlen?
 
-        converter = (side_of_triangle(fov_ver / 2, distance) * 2) / 30
+        converter = (side_of_triangle(fov_ver / 2, distance) * 2) / array_dimensions(_points)[1]
         print("proj_plane, converter: ", converter)
         points *= converter
 
@@ -867,29 +895,18 @@ def array_dimensions(_array: np.array) -> tuple:
 
     w = np.sort(_array.T[0], axis=None)
     h = np.sort(_array.T[1], axis=None)
-    return np.abs(w[0] - w[-1])+1, np.abs(h[0] - h[-1])+1
+    return np.abs(w[0] - w[-1]), np.abs(h[0] - h[-1])
+
+
+def center_pc(_array: np.array) -> np.array:
+    w, h = array_dimensions(_array)
+    return _array
 
 
 def minimal_correction_example():
     print("minimal_correction_example")
-    array = np.array([
-        [-1, 1, 0],
-        [-1, 0, 0],
-        [-1, -1, 0],
-        [0, 1, 0],
-        [0, 0, 0],
-        [0, -1, 0],
-        [1, 1, 0],
-        [1, 0, 0],
-        [1, -1, 0],
-    ])
-    array = grayscale_to_points("PointCloud/depth/z_l1.png", True)
-
-    print("array dimensions: ", array_dimensions(array))
-    sys.exit()
-
     # Make cube
-    size = 3  # half a edge
+    size = 3  # half an edge
     points = np.array([
         [-size, -size, -size],
         [-size, size, -size],
@@ -930,13 +947,23 @@ def minimal_correction_example():
 
     # Depth map projection
     image_array = grayscale_to_points("PointCloud/depth/z_l1.png", True)
-    image_array = gen_plane(40, 30, center=True)
-    image_array = gen_plane(4, 3, center=True)
+    #image_array = gen_plane(40, 30, center=True)
+    #image_array = gen_plane(4, 3, center=True)
     projection = camera.project_plane(image_array, 6.0)
 
     # wh = draw_lines(O, np.array([[1, 1, 1]]))
     check = camera.project_plane(image_array, 6)
-    o3d.visualization.draw_geometries([axis_colors(), cube, cam_pc, projection, check])
+
+    pcd = colored_flat_points("PointCloud/depth/z_l1.png")
+    # o3d.visualization.draw_geometries([pcd])
+    pts = np.asarray(pcd.points)
+    pts = center_pc(pts)
+    pts = camera.project_plane(pts, 6)
+    pcd.points = o3d.utility.Vector3dVector(pts.points)
+
+
+    o3d.visualization.draw_geometries([axis_colors(), cube, cam_pc, pcd])
+    #o3d.visualization.draw_geometries([axis_colors(), cube, cam_pc, projection, check, pcd])
 
     # check0 = camera.project_plane(image_array, 1)
     # check1 = camera.project_plane(image_array, 2)
