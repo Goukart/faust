@@ -40,8 +40,18 @@ def grid():
 
 
 def grayscale_to_points(_image_path: str, _center: bool = False) -> np.array:
+    """
+    Takes a gray scale image and generate a point cloud. The pixel position is its index in the image and the color
+    value is the z-value.
+    :param _image_path: Path to the image. "./" is the main script that is executed.
+    :param _center: If True, images anchor is in the center not top left.
+    :return: Points as np array, in a list of points not in a grid like the image.
+    """
     img = Image.open(_image_path)
     image_array = np.array(img)
+
+    print("shape: ", image_array.shape)
+    print("image_array: ", image_array)
 
     # ToDo: might be a problem, since array orientation is different to image
     _width, _height = image_array.shape
@@ -55,14 +65,24 @@ def grayscale_to_points(_image_path: str, _center: bool = False) -> np.array:
             # invers.append([x, y, -z])
             # test.append([x, y, 0])
 
+    points = np.array(points, dtype=float)
+    points = points * (len(image_array[0]) / (len(image_array[0])-1))
+
     if _center:
         offset = np.array([-_width / 2, -_height / 2, 0.])
         points += offset
 
-    return np.array(points, dtype=float)
+    return points
 
 
 def colored_flat_points(_image_path: str, _center: bool = False) -> o3d.geometry.PointCloud:
+    """
+    Takes a gray scale image and generate a colored flat point cloud.
+    :param _image_path: Path to the image. "./" is the main script that is executed.
+    :param _center: If True, images anchor is in the center not top left.
+    :return: Points as o3d geometry.
+    """
+
     img = Image.open(_image_path)
     image_array = np.array(img)
 
@@ -70,16 +90,30 @@ def colored_flat_points(_image_path: str, _center: bool = False) -> o3d.geometry
     _width, _height = image_array.shape
 
     points = []
-    z = []
+
+    z = grayscale_to_points(_image_path, _center).T[2] / 256
+    print("z: ", z)
+
     # ToDo use numpy for speed
     for y in range(0, _height):
         for x in range(0, _width):
-            z.append(image_array[x][y]/256)  # Magic number is max value of image gray scale
+            #z.append(image_array[x][y]/256)  # Magic number is max value of image gray scale
             points.append([x, y, 0])
 
     if _center:
-        offset = np.array([-_width / 2, -_height / 2, 0.])
-        points += offset
+        points = center_pc(np.asarray(points))
+
+    points = np.array(points, dtype=float)
+    # Stretch
+    print("real: ", array_dimensions(points))
+    print("shape: ", image_array.shape)
+    x_scale = (_width / (_width-1))
+    y_scale = (_height / (_height-1))
+    print("scale_x: ", x_scale)
+    print("scale_y: ", y_scale)
+    # points = points * np.array([x_scale, y_scale, 1])
+    points = points * np.array([x_scale, y_scale, 1])
+    print("stretched to real dimension: ", array_dimensions(points))
 
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(points)
@@ -122,99 +156,8 @@ def angle(_vector: np.array, _axis: np.array) -> float:
     # print("rad: ", rad)
     return math.degrees(math.acos(rad))
 
-
 #def angle(_radiant: float) -> float:
 #    return math.degrees(_radiant)
-
-
-def rodrigues_vec_to_rotation_mat(rodrigues_vec):
-    theta = np.linalg.norm(rodrigues_vec)
-    if theta < sys.float_info.epsilon:
-        rotation_mat = np.eye(3, dtype=float)
-    else:
-        r = rodrigues_vec / theta
-        I = np.eye(3, dtype=float)
-        r_rT = np.array([
-            [r[0]*r[0], r[0]*r[1], r[0]*r[2]],
-            [r[1]*r[0], r[1]*r[1], r[1]*r[2]],
-            [r[2]*r[0], r[2]*r[1], r[2]*r[2]]
-        ])
-        r_cross = np.array([
-            [0, -r[2], r[1]],
-            [r[2], 0, -r[0]],
-            [-r[1], r[0], 0]
-        ])
-        rotation_mat = math.cos(theta) * I + (1 - math.cos(theta)) * r_rT + math.sin(theta) * r_cross
-    return rotation_mat
-
-
-def _rotate_to_vector(_origin: np.array, _vector: np.array) -> np.array:
-    # Todo might be badly optimized
-    """
-    Returns a matrix, that rotates points around the origin to point in the vector direction
-    :param _vector: The direction which the points should face
-    :return: Rotation matrix
-    """
-    _origin = np.array([1, 0, 0])
-    rodriguez = rodrigues_vec_to_rotation_mat(_vector)
-
-    print("vector: ", _vector)
-    _rotation = [
-        angle(_vector, np.array([1, 0, 0])),
-        angle(_vector, np.array([0, 1, 0])),
-        angle(_vector, np.array([0, 0, 1])),
-    ]
-    # projections = a*b/|b|
-    # v - (v * plane)*plane
-    projectins = np.array([
-        _vector, #  * np.array([1, 0, 0]),
-        _vector, #  * np.array([0, 1, 0]),
-        _vector #  * np.array([0, 0, 1])
-    ])
-    print("projectins: ", projectins)
-    print(f"angle: {angle(projectins[0], np.array([1, 0, 0]))}, {angle(_origin, np.array([1, 0, 0]))}")
-    print(f"angle: {angle(projectins[1], np.array([0, 1, 0]))}, {angle(_origin, np.array([0, 1, 0]))}")
-    print(f"angle: {angle(projectins[2], np.array([0, 0, 1]))}, {angle(_origin, np.array([0, 0, 1]))}")
-    # print(f"angle: {math.acos(_vector.dot(np.array([1, 0, 0])))}, {angle(_vector, np.array([1, 0, 0]))}")
-    # print(f"angle: {_vector.dot(np.array([0, 1, 0]))}, {angle(_vector, np.array([0, 1, 0]))}")
-    # print(f"angle: {_vector.dot(np.array([0, 0, 1]))}, {angle(_vector, np.array([0, 0, 1]))}")
-    _origin = [
-        angle(_origin, np.array([1, 0, 0])),
-        angle(_origin, np.array([0, 1, 0])),
-        angle(_origin, np.array([0, 0, 1]))
-    ]
-    for i in range(len(_rotation)):
-        if _rotation[i] == _origin[i]:
-            _rotation[i] = 0
-    print("rotation mapd: ", _origin)
-    print("rotation: ", _rotation)
-    _rotation = [
-        math.radians(180 + 45),
-        math.radians(45),
-        math.radians(45),
-    ]
-    print("rotation: ", _rotation)
-
-    x_rot = np.array([
-        [1, 0, 0],
-        [0, math.cos(_rotation[0]), - math.sin(_rotation[0])],
-        [0, math.sin(_rotation[0]), math.cos(_rotation[0])]
-    ])
-    y_rot = np.array([
-        [math.cos(_rotation[1]), 0, math.sin(_rotation[1])],
-        [0, 1, 0],
-        [- math.sin(_rotation[1]), 0, math.cos(_rotation[1])]
-    ])
-    z_rot = np.array([
-        [math.cos(_rotation[2]), - math.sin(_rotation[2]), 0],
-        [math.sin(_rotation[2]), math.cos(_rotation[2]), 0],
-        [0, 0, 1]
-    ])
-    rotation = x_rot @ y_rot @ z_rot
-
-    print("matrix: ", rotation)
-    print("rodrig: ", rodriguez)
-    return rotation
 
 
 O = np.array([0, 0, 0])
@@ -223,45 +166,6 @@ E = np.array([
     [0, 1, 0],
     [0, 0, 1]
 ])
-
-
-def rotate_to(_vector: np.array) -> np.array:
-
-
-    # origin_p = np.array([
-    #     [0, 0, 0],
-    #     [1, 0, 0],
-    #     [0, 1, 0],
-    #     [0, 0, 1]
-    # ])
-
-    origin_p = np.array([
-        [0, 0, 0],
-        [0.968740071042690554, 0.043792466156151344, 0.244182093250437438],
-        [0.0579026212295622386, -0.997023473972581953, -0.0509065693441429837],
-        [0.241225954679318955, 0.0634540168595064541, -0.968392289587977184]
-    ])
-
-    origin_l = np.array([
-        [0, 1],
-        [0, 2],
-        [0, 3],
-    ])
-
-    rotation = np.array([
-        [0.968740071042690554, 0.043792466156151344, 0.244182093250437438],
-        [0.0579026212295622386, -0.997023473972581953, -0.0509065693441429837],
-        [0.241225954679318955, 0.0634540168595064541, -0.968392289587977184]
-    ])
-
-    line_set = o3d.geometry.LineSet(
-        points=o3d.utility.Vector3dVector(origin_p),
-        lines=o3d.utility.Vector2iVector(origin_l),
-    )
-    colors = [[0, 1, 1] for i in range(len(origin_p))]
-    line_set.colors = o3d.utility.Vector3dVector(colors)
-
-    return line_set
 
 
 def side_of_triangle(_angle: float, _distance: float):
@@ -310,10 +214,15 @@ class Camera(object):
         distance = 6.0
 
         side = side_of_triangle(fov_ver / 2, distance) * 2
-        print("side of triangle: ", side)
+        side_b = side_of_triangle(fov_hor / 2, distance) * 2
+        #print("side of triangle: ", side)
 
-        converter = side / (abs(-self.ratio[1]/2) + self.ratio[1]/2)
+        #converter = side / (abs(-self.ratio[1]/2) + self.ratio[1]/2)
+        converter = side / self.ratio[1]
+        converter_b = side_b / self.ratio[0]
         print("ratio: ", self.ratio)
+        print("converter: ", converter)
+        print("converter_b: ", converter_b)
         self.ratio = (self.ratio[0] * converter, self.ratio[1] * converter)
         print("scaled ratio: ", self.ratio)
 
@@ -326,6 +235,7 @@ class Camera(object):
             [0, 0, 0],
             [0, 0, 10]
         ])
+        print("points: ", points)
 
         # Rotate wireframe to fit camera orientation
         points = points @ rotation
@@ -363,9 +273,9 @@ class Camera(object):
     def get_supports(self):
         return self.supports
 
-    def project_plane(self, _points: np.array, distance: float) -> o3d.geometry.PointCloud:
+    def project_plane(self, _points: np.array, distance: float) -> np.array:
         points = _points.copy()
-        print("given: ", points.shape)  # well it's a list of points with 3 values (x, y, z)
+        #print("given: ", points.shape)  # well it's a list of points with 3 values (x, y, z)
 
         # How it gets called:
         # image_array = grayscale_to_points("PointCloud/depth/z_l1.png")
@@ -378,11 +288,11 @@ class Camera(object):
 
         # ToDo: scale image without magic number
         # ToDo: get focal length from xml
-        print("FOV from 35mm equivalent")
+        #print("FOV from 35mm equivalent")
         fov_hor = self.fov(self._SENSOR_W)
         fov_ver = self.fov(self._SENSOR_H)
-        print("fov horizontal: ", fov_hor)
-        print("fov vertical: ", fov_ver)
+        #print("fov horizontal: ", fov_hor)
+        #print("fov vertical: ", fov_ver)
 
         # plane_dim = [image_array]  # this is a plain list of all points, lets assume it is not ordered.
         # Then I need to traverse all points and find the corners
@@ -391,8 +301,7 @@ class Camera(object):
         #print("side: ", side_of_triangle(fov_ver, 6)/2)
         #switch trunken oder bundlen?
 
-        converter = (side_of_triangle(fov_ver / 2, distance) * 2) / array_dimensions(_points)[1]
-        print("proj_plane, converter: ", converter)
+        converter = (side_of_triangle(fov_ver / 2, distance) * 2) / array_dimensions(points)[1]
         points *= converter
 
         #points = np.array([[-20, -15, 0],
@@ -405,10 +314,7 @@ class Camera(object):
         # move forward
         points += np.array([0, 0, distance])
 
-        plane_pc = o3d.geometry.PointCloud()
-        plane_pc.points = o3d.utility.Vector3dVector(project_plane(points, self))
-
-        return plane_pc
+        return project_plane(points, self)
 
 
 # I need a camera position and orientation -> two vectors + rotation
@@ -776,36 +682,6 @@ def axis_colors(rotation: np.array = E, offset: np.array = np.array([0, 0, 0])) 
     return line_set
 
 
-def stuff_951() -> o3d.geometry.LineSet:
-    xml = parse_camera('Orientation-IMG_20220307_161951.jpg.xml')
-    center = xml["center"]
-    rotation = np.array([
-        [0.968740071042690554, 0.043792466156151344, 0.244182093250437438],
-        [0.0579026212295622386, -0.997023473972581953, -0.0509065693441429837],
-        [0.241225954679318955, 0.0634540168595064541, -0.968392289587977184]
-    ])
-    front = np.array([[-3.6709401432089841, 2.84011471603499821, -15.6965221529098002]])  # np.array([0, 0, 1])
-    front = -front @ rotation
-
-    points = np.concatenate((
-        [center],
-        front
-        ), axis=0)
-
-    frame = [
-        [0, 1]
-    ]
-    colors = [[0, 1, 1] for i in range(len(frame))]
-
-    line_set = o3d.geometry.LineSet(
-        points=o3d.utility.Vector3dVector(points),
-        lines=o3d.utility.Vector2iVector(frame),
-    )
-    line_set.colors = o3d.utility.Vector3dVector(colors)
-
-    return line_set
-
-
 def from_file() -> o3d.geometry.PointCloud:
     center_38 = xml_38["center"]
     center_42 = xml_42["center"]
@@ -860,18 +736,26 @@ def gen_plane(width: int, height: int, scale: float = 1., origin: np.array = np.
     origin = origin * scale
 
     f = lambda i, o: i * scale
-    if center:
-        f = lambda i, r: -(r/2) + i * r/(r-1)
+    #if center:
+    #    f = lambda i, r: -(r / 2) + i * r / (r - 1)
 
     plane = []
     for y in range(height):
         for x in range(width):
+            #plane.append([x, y, 0] + origin)
             plane.append([f(x, width), f(y, height), 0] + origin)
 
-    return np.array(plane)
+    np_plane = np.array(plane, dtype=float)
+    if center:
+        np_plane = center_pc(np_plane)
+
+    # print("centered plane: ", np_plane)
+
+    return np_plane
+    #return np.array(plane)
 
 
-def project_plane(points: np.array, camera: Camera):
+def project_plane(points: np.array, camera: Camera) -> np.array:
     # Rotate to face camera direction and move to origin
     plane_pts = points @ camera.rotation_matrix
     # center and move to origin
@@ -900,7 +784,20 @@ def array_dimensions(_array: np.array) -> tuple:
 
 def center_pc(_array: np.array) -> np.array:
     w, h = array_dimensions(_array)
-    return _array
+
+    off = np.array([w/2, h/2, 0])
+
+    return _array - off
+
+
+def np_to_pcd(_array: np.array) -> o3d.geometry.PointCloud:
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(_array)
+    return pcd
+
+
+def scale(_vector: np.array, _scale: float, _origin: np.array = O) -> np.array:
+    return ((_vector - _origin) * _scale) + _origin
 
 
 def minimal_correction_example():
@@ -946,24 +843,40 @@ def minimal_correction_example():
     cam_pc = camera.get_wireframe(camera.rotation_matrix)
 
     # Depth map projection
-    image_array = grayscale_to_points("PointCloud/depth/z_l1.png", True)
+    #image_array = grayscale_to_points("PointCloud/depth/z_l1.png", True)
     #image_array = gen_plane(40, 30, center=True)
     #image_array = gen_plane(4, 3, center=True)
-    projection = camera.project_plane(image_array, 6.0)
+    pcd = colored_flat_points("PointCloud/depth/z_ll1.png", True)
+    image_array = np.asarray(pcd.points)
+    print("image array: ", image_array)
+    # image_array = center_pc(image_array)
+
+    # image_array = center_pc(np.asarray(colored_flat_points("PointCloud/depth/z_l1.png").points))
+    proj_points = camera.project_plane(image_array, 6.0)
+    projection = np_to_pcd(proj_points)
+    projection.colors = pcd.colors
+    selection = np.array(proj_points[4000:4021])
+    print("projected points: ", selection.shape)
+
+    lazer = draw_lines(camera.position, selection, color=[1, 0, 0])
+    scaled = [scale(v, 2, camera.position) for v in selection]
+
+    lazer_scaled = draw_lines(camera.position, scaled, color=[1, 1, 0])
+
 
     # wh = draw_lines(O, np.array([[1, 1, 1]]))
-    check = camera.project_plane(image_array, 6)
 
-    pcd = colored_flat_points("PointCloud/depth/z_l1.png")
+    #pcd = colored_flat_points("PointCloud/depth/z_l1.png")
+    #pts = np.asarray(pcd.points)
+    #pts = center_pc(pts)
+    #pts = camera.project_plane(pts, 6)
+    #pcd.points = o3d.utility.Vector3dVector(pts.points)
     # o3d.visualization.draw_geometries([pcd])
-    pts = np.asarray(pcd.points)
-    pts = center_pc(pts)
-    pts = camera.project_plane(pts, 6)
-    pcd.points = o3d.utility.Vector3dVector(pts.points)
+    # o3d.visualization.draw_geometries([axis_colors(), cube, cam_pc, pcd])
 
-
-    o3d.visualization.draw_geometries([axis_colors(), cube, cam_pc, pcd])
-    #o3d.visualization.draw_geometries([axis_colors(), cube, cam_pc, projection, check, pcd])
+    o3d.visualization.RenderOption.background_color = np.asarray([0., 0., 1.])
+    geometries = [axis_colors(), cube, cam_pc, projection, lazer, lazer_scaled]
+    o3d.visualization.draw_geometries(geometries)
 
     # check0 = camera.project_plane(image_array, 1)
     # check1 = camera.project_plane(image_array, 2)
@@ -981,7 +894,6 @@ def correct():
     # points = np.asarray(cams.colors)
     # print(points)
     # file = from_file()
-    file = stuff_951()
 
     # colmap()
     # micmac()
