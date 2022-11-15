@@ -33,11 +33,6 @@ def __generate_scale_image(width, height, data_type, _range=None):
     print(scale)
     return scale
 
-# receive a number of points, arrange them in a grid, apply a scale and done:
-# get np.random.rand(10000, 3), arrange in a grid and scale z, so it's not 0-1
-def grid():
-    return 0
-
 
 def grayscale_to_points(_image_path: str, _center: bool = False) -> np.array:
     """
@@ -50,32 +45,27 @@ def grayscale_to_points(_image_path: str, _center: bool = False) -> np.array:
     img = Image.open(_image_path)
     image_array = np.array(img)
 
-    print("shape: ", image_array.shape)
-    print("image_array: ", image_array)
-
     # ToDo: might be a problem, since array orientation is different to image
     _width, _height = image_array.shape
 
     points = []
+    # Stretch each side to fit sides (width of 5 results in 0..4 points which is not quite right)
+    x_scale = (_width / (_width - 1))
+    y_scale = (_height / (_height-1))
     # ToDo use numpy for speed
     for y in range(0, _height):
         for x in range(0, _width):
             z = image_array[x][y]
-            points.append([x, y, z])
-            # invers.append([x, y, -z])
-            # test.append([x, y, 0])
+            points.append([x * x_scale, y * y_scale, z])
 
     points = np.array(points, dtype=float)
-    points = points * (len(image_array[0]) / (len(image_array[0])-1))
-
     if _center:
-        offset = np.array([-_width / 2, -_height / 2, 0.])
-        points += offset
+        center_pc(points)
 
     return points
 
 
-def colored_flat_points(_image_path: str, _center: bool = False) -> o3d.geometry.PointCloud:
+def color_points(_image_path: str, _center: bool = False) -> o3d.utility.Vector3dVector:
     """
     Takes a gray scale image and generate a colored flat point cloud.
     :param _image_path: Path to the image. "./" is the main script that is executed.
@@ -83,44 +73,20 @@ def colored_flat_points(_image_path: str, _center: bool = False) -> o3d.geometry
     :return: Points as o3d geometry.
     """
 
+    points = grayscale_to_points(_image_path, _center)
+
+    # Color points
     img = Image.open(_image_path)
     image_array = np.array(img)
+    # Magic number is max value of image gray scale
+    z = points.T[2] / 256
+    colors = [[z[i], z[i], z[i]] for i in range(image_array.size)]
 
-    # ToDo: might be a problem, since array orientation is different to image
-    _width, _height = image_array.shape
-
-    points = []
-
-    z = grayscale_to_points(_image_path, _center).T[2] / 256
-    print("z: ", z)
-
-    # ToDo use numpy for speed
-    for y in range(0, _height):
-        for x in range(0, _width):
-            #z.append(image_array[x][y]/256)  # Magic number is max value of image gray scale
-            points.append([x, y, 0])
-
-    if _center:
-        points = center_pc(np.asarray(points))
-
-    points = np.array(points, dtype=float)
-    # Stretch
-    print("real: ", array_dimensions(points))
-    print("shape: ", image_array.shape)
-    x_scale = (_width / (_width-1))
-    y_scale = (_height / (_height-1))
-    print("scale_x: ", x_scale)
-    print("scale_y: ", y_scale)
-    # points = points * np.array([x_scale, y_scale, 1])
-    points = points * np.array([x_scale, y_scale, 1])
-    print("stretched to real dimension: ", array_dimensions(points))
-
+    # Make point cloud
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(points)
-    colors = [[z[i], z[i], z[i]] for i in range(image_array.size)]
-    #print( np.sort(z, axis=None)[0])
-    #print( np.sort(z, axis=None)[-1])
-    pcd.colors = o3d.utility.Vector3dVector(colors)
+    #pcd.colors = o3d.utility.Vector3dVector(colors)
+
     return pcd
 
 
@@ -235,7 +201,6 @@ class Camera(object):
             [0, 0, 0],
             [0, 0, 10]
         ])
-        print("points: ", points)
 
         # Rotate wireframe to fit camera orientation
         points = points @ rotation
@@ -682,35 +647,6 @@ def axis_colors(rotation: np.array = E, offset: np.array = np.array([0, 0, 0])) 
     return line_set
 
 
-def from_file() -> o3d.geometry.PointCloud:
-    center_38 = xml_38["center"]
-    center_42 = xml_42["center"]
-    points_38 = np.array(xml_38["supports"])
-    points = np.array([
-        center_38,
-        center_42
-    ])
-
-    pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(points)
-
-    colors = [[1, 0, 0] for i in range(len(points))]
-    pcd.colors = o3d.utility.Vector3dVector(colors)
-    return pcd
-
-
-def colmap():
-    colmap = o3d.io.read_point_cloud("colmap.ply")
-    pc = o3d.geometry.PointCloud()
-    pc.points = o3d.utility.Vector3dVector(np.array([
-        [5.654400000, 1.754500000, 2.356000000],
-        [5.654400000, 1.754500000, 2.356000000],
-        [5.654400000, 1.754500000, 2.356000000],
-        [3.712000000, 1.740000000, 2.320000000]
-    ]))
-    o3d.visualization.draw_geometries([colmap])
-
-
 def micmac():
     xml = parse_camera('Orientation-IMG_20220307_161951.jpg.xml')
     pts = np.array(xml["supports"])
@@ -732,21 +668,23 @@ def cmpr(arr1, arr2):
         print("Are not equal")
 
 
-def gen_plane(width: int, height: int, scale: float = 1., origin: np.array = np.array([0, 0, 0]), center=False) -> np.array:
-    origin = origin * scale
+def gen_plane(_width: int, _height: int, _scale: float = 1., _origin: np.array = O, _center=False) -> np.array:
+    _origin = _origin * _scale
 
-    f = lambda i, o: i * scale
+    f = lambda i, o: i * _scale
     #if center:
     #    f = lambda i, r: -(r / 2) + i * r / (r - 1)
 
     plane = []
-    for y in range(height):
-        for x in range(width):
-            #plane.append([x, y, 0] + origin)
-            plane.append([f(x, width), f(y, height), 0] + origin)
+    for y in range(_height):
+        for x in range(_width):
+            plane.append([f(x, _width), f(y, _height), 0] + _origin)
 
     np_plane = np.array(plane, dtype=float)
-    if center:
+    x_scale = (_width / (_width - 1))
+    y_scale = (_height / (_height - 1))
+    np_plane = np_plane * np.array([x_scale, y_scale, 1])
+    if _center:
         np_plane = center_pc(np_plane)
 
     # print("centered plane: ", np_plane)
@@ -790,9 +728,23 @@ def center_pc(_array: np.array) -> np.array:
     return _array - off
 
 
-def np_to_pcd(_array: np.array) -> o3d.geometry.PointCloud:
+def np_to_pcd(_array: np.array, _image_path: str = None) -> o3d.geometry.PointCloud:
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(_array)
+
+    if not _image_path:
+        return pcd
+
+    # Color points
+    img = Image.open(_image_path)
+    image_array = np.array(img)
+    # Magic number is max value of image gray scale
+    z = _array.T[2] / 256
+    print(z)
+    colors = [[z[i], z[i], z[i]] for i in range(image_array.size)]
+    #print(colors)
+    pcd.colors = o3d.utility.Vector3dVector(colors)
+
     return pcd
 
 
@@ -845,38 +797,47 @@ def minimal_correction_example():
     # Depth map projection
     #image_array = grayscale_to_points("PointCloud/depth/z_l1.png", True)
     #image_array = gen_plane(40, 30, center=True)
-    #image_array = gen_plane(4, 3, center=True)
-    pcd = colored_flat_points("PointCloud/depth/z_ll1.png", True)
-    image_array = np.asarray(pcd.points)
-    print("image array: ", image_array)
+    #image_array = gen_plane(4, 3, _center=True)
+    #image_array = np.asarray(pcd.points)
+    #projection = np_to_pcd(camera.project_plane(image_array, 6))
+
     # image_array = center_pc(image_array)
 
     # image_array = center_pc(np.asarray(colored_flat_points("PointCloud/depth/z_l1.png").points))
+
+    source = "PointCloud/depth/z_lll1.png"
+    image_array = grayscale_to_points(source, True)
+    image_array = image_array * np.array([1, 1, 0])
+    # image_array = (np.array([scale(v, 0.5, camera.position) for v in image_array]))
+    # image_array = np.array([scale(v, 5, camera.position) for v in image_array])
+
     proj_points = camera.project_plane(image_array, 6.0)
-    projection = np_to_pcd(proj_points)
-    projection.colors = pcd.colors
-    selection = np.array(proj_points[4000:4021])
-    print("projected points: ", selection.shape)
+    shift = np_to_pcd(np.array([scale(v, 0.5, camera.position) for v in proj_points]))
+    projection = np_to_pcd(proj_points, source)
+    #selection = np.array(proj_points[4000:4021])
 
-    lazer = draw_lines(camera.position, selection, color=[1, 0, 0])
-    scaled = [scale(v, 2, camera.position) for v in selection]
+    #lazer = draw_lines(camera.position, selection, color=[1, 0, 0])
+    #scaled = [scale(v, 2, camera.position) for v in selection]
+    #lazer_scaled = draw_lines(camera.position, scaled, color=[1, 1, 0])
 
-    lazer_scaled = draw_lines(camera.position, scaled, color=[1, 1, 0])
-
-
-    # wh = draw_lines(O, np.array([[1, 1, 1]]))
 
     #pcd = colored_flat_points("PointCloud/depth/z_l1.png")
-    #pts = np.asarray(pcd.points)
-    #pts = center_pc(pts)
-    #pts = camera.project_plane(pts, 6)
-    #pcd.points = o3d.utility.Vector3dVector(pts.points)
-    # o3d.visualization.draw_geometries([pcd])
-    # o3d.visualization.draw_geometries([axis_colors(), cube, cam_pc, pcd])
+    pts = grayscale_to_points("PointCloud/depth/z_ll1.png")
+    pts = center_pc(pts)
+
+    # inverse = np.array([1, 1, -1])
+    flat = np.array([1, 1, 0])
+    #pts *= flat
+
+    pts = camera.project_plane(pts, 6)
+    pcd = np_to_pcd(pts*flat, "PointCloud/depth/z_ll1.png")
+    #o3d.visualization.draw_geometries([pcd])
+    o3d.visualization.draw_geometries([axis_colors(), cube, cam_pc, pcd])
 
     o3d.visualization.RenderOption.background_color = np.asarray([0., 0., 1.])
-    geometries = [axis_colors(), cube, cam_pc, projection, lazer, lazer_scaled]
-    o3d.visualization.draw_geometries(geometries)
+    #geometries = [axis_colors(), cube, cam_pc, projection, lazer, lazer_scaled, shift]
+    ##geometries = [axis_colors(), cube, cam_pc, projection, pcd]
+    ##o3d.visualization.draw_geometries(geometries)
 
     # check0 = camera.project_plane(image_array, 1)
     # check1 = camera.project_plane(image_array, 2)
