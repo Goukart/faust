@@ -741,7 +741,8 @@ def np_to_pcd(_array: np.array, _image_path: str = None) -> o3d.geometry.PointCl
     # Magic number is max value of image gray scale
     z = _array.T[2] / 256
     print(z)
-    colors = [[z[i], z[i], z[i]] for i in range(image_array.size)]
+    #colors = [[z[i], z[i], z[i]] for i in range(image_array.size)]
+    colors = [[random.random(), random.random(), random.random()] for i in range(image_array.size)]
     #print(colors)
     pcd.colors = o3d.utility.Vector3dVector(colors)
 
@@ -827,10 +828,10 @@ def minimal_correction_example():
 
     # inverse = np.array([1, 1, -1])
     flat = np.array([1, 1, 0])
-    #pts *= flat
+    pts *= flat
 
     pts = camera.project_plane(pts, 6)
-    pcd = np_to_pcd(pts*flat, "PointCloud/depth/z_ll1.png")
+    pcd = np_to_pcd(pts, "PointCloud/depth/z_ll1.png")
     #o3d.visualization.draw_geometries([pcd])
     o3d.visualization.draw_geometries([axis_colors(), cube, cam_pc, pcd])
 
