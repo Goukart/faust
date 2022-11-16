@@ -47,6 +47,7 @@ def grayscale_to_points(_image_path: str, _center: bool = False) -> np.array:
 
     # ToDo: might be a problem, since array orientation is different to image
     _width, _height = image_array.shape
+    print("What the size should be: ", image_array.size)
 
     points = []
     # Stretch each side to fit sides (width of 5 results in 0..4 points which is not quite right)
@@ -60,7 +61,7 @@ def grayscale_to_points(_image_path: str, _center: bool = False) -> np.array:
 
     points = np.array(points, dtype=float)
     if _center:
-        center_pc(points)
+        points = center_pc(points)
 
     return points
 
@@ -728,24 +729,53 @@ def center_pc(_array: np.array) -> np.array:
     return _array - off
 
 
-def np_to_pcd(_array: np.array, _image_path: str = None) -> o3d.geometry.PointCloud:
+def np_to_pcd(_array: np.array) -> o3d.geometry.PointCloud:
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(_array)
 
-    if not _image_path:
-        return pcd
+    return pcd
 
-    # Color points
+
+def colored_flat_points(_image_path: str, _center: bool = False) -> o3d.geometry.PointCloud:
+    """
+    Takes a gray scale image and generate a colored flat point cloud.
+    :param _image_path: Path to the image. "./" is the main script that is executed.
+    :param _center: If True, images anchor is in the center not top left.
+    :return: Points as o3d geometry.
+    """
+
     img = Image.open(_image_path)
     image_array = np.array(img)
-    # Magic number is max value of image gray scale
-    z = _array.T[2] / 256
-    print(z)
-    #colors = [[z[i], z[i], z[i]] for i in range(image_array.size)]
-    colors = [[random.random(), random.random(), random.random()] for i in range(image_array.size)]
-    #print(colors)
-    pcd.colors = o3d.utility.Vector3dVector(colors)
 
+    # ToDo: might be a problem, since array orientation is different to image
+    _width, _height = image_array.shape
+
+    points = []
+
+    z = grayscale_to_points(_image_path, _center).T[2] / 256
+    print("z colored_flat_points: ", z)
+
+    # ToDo use numpy for speed
+    for y in range(0, _height):
+        for x in range(0, _width):
+            #z.append(image_array[x][y]/256)  # Magic number is max value of image gray scale
+            points.append([x, y, 0])
+
+    if _center:
+        points = center_pc(np.asarray(points))
+
+    points = np.array(points, dtype=float)
+    # Stretch
+    x_scale = (_width / (_width-1))
+    y_scale = (_height / (_height-1))
+    points = points * np.array([x_scale, y_scale, 1])
+
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(points)
+    colors = [[z[i], z[i], z[i]] for i in range(image_array.size)]
+    #print("colors: ", colors)
+
+    pcd.colors = o3d.utility.Vector3dVector(colors)
     return pcd
 
 
@@ -814,7 +844,7 @@ def minimal_correction_example():
 
     proj_points = camera.project_plane(image_array, 6.0)
     shift = np_to_pcd(np.array([scale(v, 0.5, camera.position) for v in proj_points]))
-    projection = np_to_pcd(proj_points, source)
+    projection = np_to_pcd(proj_points)
     #selection = np.array(proj_points[4000:4021])
 
     #lazer = draw_lines(camera.position, selection, color=[1, 0, 0])
@@ -823,15 +853,27 @@ def minimal_correction_example():
 
 
     #pcd = colored_flat_points("PointCloud/depth/z_l1.png")
-    pts = grayscale_to_points("PointCloud/depth/z_ll1.png")
-    pts = center_pc(pts)
 
+    # Generate point cloud from image
+    pts = grayscale_to_points("PointCloud/depth/z_lll1.png", True)
+    # Extract colors
+    z = pts.T[2] / 256
+    clr = [[z[i], z[i], z[i]] for i in range(len(z))]
+
+    # Flatten or inverse points
     # inverse = np.array([1, 1, -1])
     flat = np.array([1, 1, 0])
     pts *= flat
 
+    # project it from camera pov
     pts = camera.project_plane(pts, 6)
-    pcd = np_to_pcd(pts, "PointCloud/depth/z_ll1.png")
+
+    # Put it together and make a colored o3d point cloud
+    pcd = np_to_pcd(pts)
+    pcd.colors = o3d.utility.Vector3dVector(clr)
+
+    #pp = colored_flat_points("PointCloud/depth/z_ll1.png", True)
+
     #o3d.visualization.draw_geometries([pcd])
     o3d.visualization.draw_geometries([axis_colors(), cube, cam_pc, pcd])
 
